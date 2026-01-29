@@ -11,3 +11,4 @@ npm run dev
 29.01.2026 tarihinde backend ile bağlantı kuruldu (viteconfig.ts) database bağlantısıda yapılmış oldu backend çalışmazsa frontend çalışır ancak veri gelmez
 çoğu sayfa hazır barkod okuyucu entegrasyonu kaldı görsele gerek yok kaldırılcak account sayfası olcak şifre alma şifre değiştirme eklenecek smtp ile olur 
 backend kısmı için biten ilaçlar için uyarı sistemi eklendi celery ile alıyoruz bunu maile dökmeyi deneyelim.
+
