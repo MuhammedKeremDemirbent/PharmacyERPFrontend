@@ -1,0 +1,291 @@
+import { useEffect, useState } from 'react'
+import api from '../api'
+
+const Procurement = () => {
+    const [suppliers, setSuppliers] = useState([])
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        api.get('/procurement/')
+            .then(response => {
+                console.log('Suppliers fetched:', response.data)
+                setSuppliers(response.data)
+            })
+            .catch(err => {
+                console.error('Error fetching suppliers:', err)
+                setError('Tedarikçi listesi yüklenirken hata oluştu.')
+            })
+    }, [])
+    const [showModal, setShowModal] = useState(false)
+    const [newItem, setNewItem] = useState({ name: '', phone_number_proc: '', address_proc: '', email: '' })
+    const [editingId, setEditingId] = useState<number | null>(null)
+
+    // Kaydet (Hem Ekleme hem Güncelleme)
+    const handleSaveSupplier = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            if (editingId) {
+                // GÜNCELLEME (PUT)
+                await api.put(`/procurement/${editingId}/`, newItem)
+                alert('Tedarikçi güncellendi!')
+            } else {
+                // YENİ EKLEME (POST)
+                await api.post('/procurement/', newItem)
+                alert('Tedarikçi eklendi!')
+            }
+            setShowModal(false)
+            resetForm()
+            // Refresh list
+            const res = await api.get('/procurement/')
+            setSuppliers(res.data)
+        } catch (err: any) {
+            console.error('İşlem hatası:', err)
+            const status = err.response?.status
+            const msg = err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message
+            setError(`Hata (${status}): ${msg}`)
+            alert(`İşlem başarısız!\nHata Kodu: ${status}\nMesaj: ${msg}`)
+        }
+    }
+
+    const resetForm = () => {
+        setNewItem({ name: '', phone_number_proc: '', address_proc: '', email: '' })
+        setEditingId(null)
+    }
+
+    const openEditModal = (supplier: any) => {
+        setEditingId(supplier.id)
+        setNewItem({
+            name: supplier.name,
+            phone_number_proc: supplier.phone_number_proc,
+            address_proc: supplier.address_proc,
+            email: supplier.email || ''
+        })
+        setShowModal(true)
+    }
+
+    const [emailModal, setEmailModal] = useState(false)
+    const [emailData, setEmailData] = useState({ subject: '', message: '', supplierId: null as number | null })
+
+    const handleSendEmail = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!emailData.supplierId) return
+
+        try {
+            // Backend endpoint confirmed: /procurement/<id>/send-email/
+            await api.post(`/procurement/${emailData.supplierId}/send-email/`, emailData)
+            alert('E-posta başarıyla gönderildi!')
+            setEmailModal(false)
+            setEmailData({ subject: '', message: '', supplierId: null })
+        } catch (err: any) {
+            console.error('Mail hatası:', err)
+            const msg = err.response?.data?.detail || err.message
+            alert(`Mail gönderilemedi: ${msg}`)
+        }
+    }
+
+    const openEmailModal = (supplier: any) => {
+        setEmailData({ ...emailData, supplierId: supplier.id })
+        setEmailModal(true)
+    }
+
+    const openNewModal = () => {
+        resetForm()
+        setShowModal(true)
+    }
+
+    return (
+        <div className="container mx-auto p-4">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold text-purple-600">Tedarikçi Yönetimi</h1>
+                <button
+                    onClick={openNewModal}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow-lg flex items-center gap-2"
+                >
+                    <span>+</span> Yeni Tedarikçi Ekle
+                </button>
+            </div>
+
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <strong className="font-bold">Hata: </strong>
+                    <span className="block sm:inline">{error}</span>
+                </div>
+            )}
+
+            {/* EMAIL MODAL */}
+            {emailModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">E-Posta Gönder</h2>
+                        <form onSubmit={handleSendEmail}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Konu</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="border p-2 w-full rounded"
+                                    value={emailData.subject}
+                                    onChange={e => setEmailData({ ...emailData, subject: e.target.value })}
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Mesaj</label>
+                                <textarea
+                                    required
+                                    className="border p-2 w-full rounded"
+                                    rows={5}
+                                    value={emailData.message}
+                                    onChange={e => setEmailData({ ...emailData, message: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setEmailModal(false)}
+                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                                >
+                                    Gönder
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT/NEW MODAL */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">
+                            {editingId ? 'Tedarikçi Düzenle' : 'Yeni Tedarikçi'}
+                        </h2>
+                        <form onSubmit={handleSaveSupplier}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Firma Adı</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="border p-2 w-full rounded"
+                                    value={newItem.name}
+                                    onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">E-Posta</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="border p-2 w-full rounded"
+                                    value={newItem.email}
+                                    onChange={e => setNewItem({ ...newItem, email: e.target.value })}
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Telefon</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="border p-2 w-full rounded"
+                                    value={newItem.phone_number_proc}
+                                    onChange={e => setNewItem({ ...newItem, phone_number_proc: e.target.value })}
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Adres</label>
+                                <textarea
+                                    required
+                                    className="border p-2 w-full rounded"
+                                    rows={3}
+                                    value={newItem.address_proc}
+                                    onChange={e => setNewItem({ ...newItem, address_proc: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded"
+                                >
+                                    {editingId ? 'Güncelle' : 'Kaydet'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            <div className="overflow-x-auto shadow-md sm:rounded-lg">
+                <table className="w-full text-sm text-left text-gray-500">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" className="px-6 py-3">Tedarikçi ID</th>
+                            <th scope="col" className="px-6 py-3">Firma Adı</th>
+                            <th scope="col" className="px-6 py-3">E-Posta</th>
+                            <th scope="col" className="px-6 py-3">Telefon</th>
+                            <th scope="col" className="px-6 py-3">Adres</th>
+                            <th scope="col" className="px-6 py-3">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {suppliers.length > 0 ? (
+                            suppliers.map((supplier: any) => (
+                                <tr key={supplier.id} className="bg-white border-b hover:bg-gray-50">
+                                    <td className="px-6 py-4 font-medium text-gray-900">
+                                        #{supplier.id}
+                                    </td>
+                                    <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                                        {supplier.name}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {supplier.email || '-'}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {supplier.phone_number_proc}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {supplier.address_proc}
+                                    </td>
+                                    <td className="px-6 py-4 flex gap-2">
+                                        <button
+                                            onClick={() => openEditModal(supplier)}
+                                            className="font-medium text-blue-600 hover:underline"
+                                        >
+                                            Düzenle
+                                        </button>
+                                        <button
+                                            onClick={() => openEmailModal(supplier)}
+                                            className="font-medium text-green-600 hover:underline"
+                                        >
+                                            Mail At
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+
+                        ) : (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-4 text-center">
+                                    {error ? 'Veri yüklenemedi.' : 'Kayıtlı tedarikçi bulunamadı.'}
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
+}
+
+export default Procurement
