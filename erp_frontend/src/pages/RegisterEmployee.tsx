@@ -67,7 +67,7 @@ const RegisterEmployee = () => {
         }
     }
 
-    // GİRİŞ EKRANI (KİLİT)
+    // GİRİŞ EKRANI
     if (!isAuthenticated) {
         return (
             <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh]">
