@@ -8,7 +8,7 @@ const Patients = () => {
     // Güvenlik için durum değişkenleri
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [pin, setPin] = useState('')
-    const CORRECT_PIN = "1234" // Eczane ortak şifresi
+    const CORRECT_PIN = "1234" // Eczane hasta database ortak şifresi
 
     useEffect(() => {
         // Sadece giriş yapıldıysa veriyi çek
@@ -36,7 +36,7 @@ const Patients = () => {
         }
     }
 
-    // GİRİŞ EKRANI (KİLİT)
+    // GİRİŞ EKRANI
     if (!isAuthenticated) {
         return (
             <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh]">
@@ -72,7 +72,6 @@ const Patients = () => {
         )
     }
 
-    // TABLO EKRANI (GİRİŞ YAPILDIKTAN SONRA)
     return (
         <div className="container mx-auto p-4">
             <div className="flex justify-between items-center mb-6">
