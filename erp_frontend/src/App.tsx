@@ -3,6 +3,7 @@ import Inventory from './pages/inventory';
 import Patients from './pages/patients';
 import Procurement from './pages/procurement';
 import MainPOS from './pages/main';
+import RegisterEmployee from './pages/RegisterEmployee';
 import Login from './pages/Login'; // Yeni Login sayfası
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -33,6 +34,7 @@ function App() {
               <Route path="/patients" element={<Patients />} />
               <Route path="/procurement" element={<Procurement />} />
               <Route path="/sales" element={<MainPOS />} />
+              <Route path="/register-employee" element={<RegisterEmployee />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
