@@ -12,3 +12,5 @@ npm run dev
 çoğu sayfa hazır barkod okuyucu entegrasyonu kaldı görsele gerek yok kaldırılcak account sayfası olcak şifre alma şifre değiştirme eklenecek smtp ile olur 
 backend kısmı için biten ilaçlar için uyarı sistemi eklendi celery ile alıyoruz bunu maile dökmeyi deneyelim.
 
+31.01.2026 tarihinde kullanıcı ekleme sayfasına şifre koruması eklendi.
+Sırada görselleri kaldırmakta tedarikçilere otomatik mail gönderme sistemi 
