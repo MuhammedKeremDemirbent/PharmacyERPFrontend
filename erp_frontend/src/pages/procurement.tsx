@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
+import Message from '../components/Message'
 
 const Procurement = () => {
     const [suppliers, setSuppliers] = useState([])
@@ -19,6 +20,7 @@ const Procurement = () => {
     const [showModal, setShowModal] = useState(false)
     const [newItem, setNewItem] = useState({ name: '', phone_number_proc: '', address_proc: '', email: '' })
     const [editingId, setEditingId] = useState<number | null>(null)
+    const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
     // Kaydet (Hem Ekleme hem Güncelleme)
     const handleSaveSupplier = async (e: React.FormEvent) => {
@@ -27,11 +29,11 @@ const Procurement = () => {
             if (editingId) {
                 // GÜNCELLEME (PUT)
                 await api.put(`/procurement/${editingId}/`, newItem)
-                alert('Tedarikçi güncellendi!')
+                setMessageData({ type: 'success', message: 'Tedarikçi güncellendi!' })
             } else {
                 // YENİ EKLEME (POST)
                 await api.post('/procurement/', newItem)
-                alert('Tedarikçi eklendi!')
+                setMessageData({ type: 'success', message: 'Tedarikçi eklendi!' })
             }
             setShowModal(false)
             resetForm()
@@ -43,7 +45,8 @@ const Procurement = () => {
             const status = err.response?.status
             const msg = err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message
             setError(`Hata (${status}): ${msg}`)
-            alert(`İşlem başarısız!\nHata Kodu: ${status}\nMesaj: ${msg}`)
+            setError(`Hata (${status}): ${msg}`)
+            setMessageData({ type: 'error', title: 'İşlem Başarısız!', message: `Hata Kodu: ${status}\nMesaj: ${msg}` })
         }
     }
 
@@ -73,13 +76,13 @@ const Procurement = () => {
         try {
             // Backend endpoint confirmed: /procurement/<id>/send-email/
             await api.post(`/procurement/${emailData.supplierId}/send-email/`, emailData)
-            alert('E-posta başarıyla gönderildi!')
+            setMessageData({ type: 'success', message: 'E-posta başarıyla gönderildi!' })
             setEmailModal(false)
             setEmailData({ subject: '', message: '', supplierId: null })
         } catch (err: any) {
             console.error('Mail hatası:', err)
             const msg = err.response?.data?.detail || err.message
-            alert(`Mail gönderilemedi: ${msg}`)
+            setMessageData({ type: 'error', message: `Mail gönderilemedi: ${msg}` })
         }
     }
 
@@ -104,6 +107,15 @@ const Procurement = () => {
                     <span>+</span> Yeni Tedarikçi Ekle
                 </button>
             </div>
+
+            {messageData && (
+                <Message
+                    type={messageData.type}
+                    title={messageData.title}
+                    message={messageData.message}
+                    onClose={() => setMessageData(null)}
+                />
+            )}
 
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">

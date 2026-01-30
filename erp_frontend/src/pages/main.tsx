@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
+import Message from '../components/Message'
 
 // POS Sistemi için Satış Ekranı
 const MainPOS = () => {
@@ -9,6 +10,7 @@ const MainPOS = () => {
     const [searchTerm, setSearchTerm] = useState('') // Arama
     const [loading, setLoading] = useState(true)
     const [processing, setProcessing] = useState(false) // Satış işlemi sırası
+    const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
     useEffect(() => {
         fetchProducts()
@@ -31,8 +33,10 @@ const MainPOS = () => {
     const addToBasket = (product: any) => {
         // Stok kontrolü (İsteğe bağlı, şimdilik sadece görsel uyarı verebiliriz)
         if (product.how_many <= 0) {
-            alert("Bu ürün stokta yok!");
-            return;
+            if (product.how_many <= 0) {
+                setMessageData({ type: 'warning', message: 'Bu ürün stokta yok!' })
+                return;
+            }
         }
 
         setBasket(prev => {
@@ -40,8 +44,10 @@ const MainPOS = () => {
             if (existing) {
                 // Eğer sepetteki miktar stoktan fazlaysa uyarı ver
                 if (existing.count >= product.how_many) {
-                    alert("Yetersiz stok!");
-                    return prev;
+                    if (existing.count >= product.how_many) {
+                        setMessageData({ type: 'warning', message: 'Yetersiz stok!' })
+                        return prev;
+                    }
                 }
                 return prev.map(item =>
                     item.product.id === product.id ? { ...item, count: item.count + 1 } : item
@@ -88,7 +94,8 @@ const MainPOS = () => {
 
             // Başarılı olursa
             console.log("Satış başarılı:", response.data);
-            alert(`✅ Satış Başarıyla Tamamlandı!\n\nSatış ID: #${response.data.sale_id}\nToplam Tutar: ₺${response.data.total}`);
+            console.log("Satış başarılı:", response.data);
+            setMessageData({ type: 'success', title: 'Satış Başarılı!', message: `Satış ID: #${response.data.sale_id}\nToplam Tutar: ₺${response.data.total}` });
 
             setBasket([]); // Sepeti temizle
             fetchProducts(); // Stokları güncelle (Backend'den yeni halini çek)
@@ -96,10 +103,8 @@ const MainPOS = () => {
         } catch (error: any) {
             console.error("Satış hatası:", error); // Konsola detaylı yaz
 
-            // Backend'den gelen hata mesajı
             const errorMessage = error.response?.data?.error || "Satış işlemi sırasında bir hata oluştu.";
-
-            alert(`❌ Hata: ${errorMessage}`);
+            setMessageData({ type: 'error', message: `Hata: ${errorMessage}` });
         } finally {
             setProcessing(false);
         }
@@ -117,6 +122,14 @@ const MainPOS = () => {
 
     return (
         <div className="flex h-full overflow-hidden bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+            {messageData && (
+                <Message
+                    type={messageData.type}
+                    title={messageData.title}
+                    message={messageData.message}
+                    onClose={() => setMessageData(null)}
+                />
+            )}
             {/* SOL TARAF: ÜRÜN LİSTESİ */}
             <div className="w-2/3 p-4 flex flex-col overflow-hidden">
                 <div className="mb-4">
