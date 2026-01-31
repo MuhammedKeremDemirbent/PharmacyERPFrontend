@@ -4,14 +4,21 @@ import api from '../api'
 const Patients = () => {
     const [patients, setPatients] = useState([])
     const [error, setError] = useState('')
+    const [showModal, setShowModal] = useState(false)
+    const [formData, setFormData] = useState({
+        first_name: '',
+        last_name: '',
+        phone_number: '',
+        address: '',
+        email: ''
+    })
 
     // Güvenlik için durum değişkenleri
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [pin, setPin] = useState('')
     const CORRECT_PIN = "1234" // Eczane hasta database ortak şifresi
 
-    useEffect(() => {
-        // Sadece giriş yapıldıysa veriyi çek
+    const fetchPatients = () => {
         if (isAuthenticated) {
             api.get('/patients/')
                 .then(response => {
@@ -23,7 +30,11 @@ const Patients = () => {
                     setError('Hasta listesi yüklenirken hata oluştu.')
                 })
         }
-    }, [isAuthenticated]) // isAuthenticated değişince çalışır
+    }
+
+    useEffect(() => {
+        fetchPatients()
+    }, [isAuthenticated])
 
     const handlePinSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -33,6 +44,20 @@ const Patients = () => {
         } else {
             setError('Hatalı şifre!')
             setPin('')
+        }
+    }
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            await api.post('/patients/', formData)
+            alert('Hasta başarıyla eklendi!') // Basit bildirim
+            setShowModal(false)
+            setFormData({ first_name: '', last_name: '', phone_number: '', address: '', email: '' })
+            fetchPatients()
+        } catch (err) {
+            console.error(err)
+            alert('Kayıt sırasında bir hata oluştu.')
         }
     }
 
@@ -76,12 +101,20 @@ const Patients = () => {
         <div className="container mx-auto p-4">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-green-600">Hasta Listesi</h1>
-                <button
-                    onClick={() => setIsAuthenticated(false)}
-                    className="text-sm text-gray-500 hover:text-red-500 underline"
-                >
-                    Güvenli Çıkış
-                </button>
+                <div>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-4"
+                    >
+                        + Yeni Hasta
+                    </button>
+                    <button
+                        onClick={() => setIsAuthenticated(false)}
+                        className="text-sm text-gray-500 hover:text-red-500 underline"
+                    >
+                        Güvenli Çıkış
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -98,6 +131,7 @@ const Patients = () => {
                             <th scope="col" className="px-6 py-3">Hasta ID</th>
                             <th scope="col" className="px-6 py-3">Adı Soyadı</th>
                             <th scope="col" className="px-6 py-3">Telefon</th>
+                            <th scope="col" className="px-6 py-3">Email</th>
                             <th scope="col" className="px-6 py-3">Adres</th>
                         </tr>
                     </thead>
@@ -115,13 +149,16 @@ const Patients = () => {
                                         {patient.phone_number}
                                     </td>
                                     <td className="px-6 py-4">
+                                        {patient.email || '-'}
+                                    </td>
+                                    <td className="px-6 py-4">
                                         {patient.address}
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="px-6 py-4 text-center">
+                                <td colSpan={5} className="px-6 py-4 text-center">
                                     {error ? 'Veri yüklenemedi.' : 'Kayıtlı hasta bulunamadı.'}
                                 </td>
                             </tr>
@@ -129,6 +166,41 @@ const Patients = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* MODAL */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-xl">
+                        <h2 className="text-xl font-bold mb-4">Yeni Hasta Ekle</h2>
+                        <form onSubmit={handleSave}>
+                            <div className="mb-3">
+                                <label className="block text-sm font-bold mb-1">Ad</label>
+                                <input required className="border p-2 w-full rounded" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
+                            </div>
+                            <div className="mb-3">
+                                <label className="block text-sm font-bold mb-1">Soyad</label>
+                                <input required className="border p-2 w-full rounded" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
+                            </div>
+                            <div className="mb-3">
+                                <label className="block text-sm font-bold mb-1">Telefon</label>
+                                <input required className="border p-2 w-full rounded" value={formData.phone_number} onChange={e => setFormData({ ...formData, phone_number: e.target.value })} />
+                            </div>
+                            <div className="mb-3">
+                                <label className="block text-sm font-bold mb-1">Email</label>
+                                <input type="email" className="border p-2 w-full rounded" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                            </div>
+                            <div className="mb-3">
+                                <label className="block text-sm font-bold mb-1">Adres</label>
+                                <textarea className="border p-2 w-full rounded" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => setShowModal(false)} className="bg-gray-300 px-4 py-2 rounded">İptal</button>
+                                <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

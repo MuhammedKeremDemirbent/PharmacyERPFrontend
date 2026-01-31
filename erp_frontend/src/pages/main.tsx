@@ -12,9 +12,20 @@ const MainPOS = () => {
     const [processing, setProcessing] = useState(false) // Satış işlemi sırası
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
+    // CRM: Müşteri Seçimi
+    const [patients, setPatients] = useState([])
+    const [selectedPatient, setSelectedPatient] = useState<number | null>(null)
+
     useEffect(() => {
         fetchProducts()
+        fetchPatients()
     }, [])
+
+    const fetchPatients = () => {
+        api.get('/patients/')
+            .then(res => setPatients(res.data))
+            .catch(err => console.error("Hasta listesi çekilemedi:", err))
+    }
 
     const fetchProducts = () => {
         setLoading(true)
@@ -86,7 +97,8 @@ const MainPOS = () => {
                 items: basket.map(item => ({
                     product_id: item.product.id,
                     quantity: item.count
-                }))
+                })),
+                patient_id: selectedPatient // CRM: Seçili hastayı gönder
             };
 
             // API'ye POST isteği at
@@ -94,10 +106,10 @@ const MainPOS = () => {
 
             // Başarılı olursa
             console.log("Satış başarılı:", response.data);
-            console.log("Satış başarılı:", response.data);
             setMessageData({ type: 'success', title: 'Satış Başarılı!', message: `Satış ID: #${response.data.sale_id}\nToplam Tutar: ₺${response.data.total}` });
 
             setBasket([]); // Sepeti temizle
+            setSelectedPatient(null); // Müşteri seçimini sıfırla
             fetchProducts(); // Stokları güncelle (Backend'den yeni halini çek)
 
         } catch (error: any) {
@@ -175,6 +187,23 @@ const MainPOS = () => {
                     <h2 className="text-2xl font-bold flex items-center">
                         🛒 Satış Sepeti
                     </h2>
+                </div>
+
+                {/* CRM: MÜŞTERİ SEÇİMİ */}
+                <div className="p-3 bg-blue-50 border-b border-blue-100">
+                    <label className="block text-xs font-bold text-blue-800 mb-1">Müşteri Seç (Opsiyonel)</label>
+                    <select
+                        className="w-full p-2 border border-blue-300 rounded text-sm focus:outline-none focus:border-blue-500"
+                        value={selectedPatient || ''}
+                        onChange={e => setSelectedPatient(e.target.value ? Number(e.target.value) : null)}
+                    >
+                        <option value="">-- Müşteri Seçilmedi --</option>
+                        {patients.map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                                {p.first_name} {p.last_name} ({p.phone_number})
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4">
