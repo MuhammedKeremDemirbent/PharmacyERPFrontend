@@ -27,6 +27,11 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
+        // Login isteği (token alma) sırasında 401 gelirse araya girme, Login.tsx kendi halletsin.
+        if (originalRequest.url.includes('/token/') && !originalRequest.url.includes('/refresh/')) {
+            return Promise.reject(error);
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
             const refreshToken = localStorage.getItem('refresh_token');

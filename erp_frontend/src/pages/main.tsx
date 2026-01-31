@@ -143,39 +143,24 @@ const MainPOS = () => {
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                <div className="flex-1 overflow-y-auto pb-20 space-y-3">
                     {filteredProducts.map((product: any) => (
                         <div
                             key={product.id}
                             onClick={() => addToBasket(product)}
-                            className={`cursor-pointer bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all border-l-4 ${product.how_many > 0 ? 'border-green-500' : 'border-red-500 hover:bg-red-50'}`}
+                            className={`cursor-pointer bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all border-l-4 flex justify-between items-center ${product.how_many > 0 ? 'border-green-500' : 'border-red-500 hover:bg-red-50'}`}
                         >
-                            <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-bold text-gray-800 text-lg truncate w-full" title={product.name}>{product.name}</h3>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-gray-800 text-lg">{product.name}</h3>
+                                <span className="text-sm text-gray-500">{product.form_type}</span>
                             </div>
 
-                            {/* RESİM ALANI */}
-                            <div className="h-32 w-full bg-gray-50 flex items-center justify-center mb-2 rounded overflow-hidden">
-                                <img
-                                    src={`/images/medicines/${product.name.toUpperCase()}.png`}
-                                    alt={product.name}
-                                    className="max-h-full max-w-full object-contain"
-                                    onError={(e) => {
-                                        const img = e.target as HTMLImageElement;
-                                        if (img.src.includes('.png')) {
-                                            img.src = img.src.replace('.png', '.jpg');
-                                        } else {
-                                            img.style.display = 'none';
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
-                                <span className="bg-gray-100 px-2 py-1 rounded">{product.form_type}</span>
-                                <span className={product.how_many < 10 ? 'text-red-600 font-bold' : 'text-green-600 font-bold'}>
+                            <div className="text-right px-4">
+                                <span className={product.how_many < 10 ? 'text-red-600 font-bold block' : 'text-green-600 font-bold block'}>
                                     {product.how_many} Adet
                                 </span>
                             </div>
+
                             <div className="text-right">
                                 <span className="text-xl font-bold text-blue-600">₺{product.price}</span>
                             </div>
