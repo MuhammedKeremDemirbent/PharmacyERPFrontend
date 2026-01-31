@@ -13,4 +13,5 @@ npm run dev
 backend kısmı için biten ilaçlar için uyarı sistemi eklendi celery ile alıyoruz bunu maile dökmeyi deneyelim.
 
 31.01.2026 tarihinde kullanıcı ekleme sayfasına şifre koruması eklendi.
-Sırada görselleri kaldırmakta tedarikçilere otomatik mail gönderme sistemi 
+Sırada görselleri kaldırdık backend kısmında biten ilaçlar için uyarı sistemi eklendi celery ile alıyoruz bunu maile dökmeyi deneyelim.
+.env eklendi şifreler vs oraya yazıldı. 
