@@ -6,6 +6,10 @@ const Procurement = () => {
     const [suppliers, setSuppliers] = useState([])
     const [error, setError] = useState('')
 
+
+    const [orderList, setOrderList] = useState<{ name: string, quantity: number }[]>([])
+    const [medicines, setMedicines] = useState([])
+
     useEffect(() => {
         api.get('/procurement/')
             .then(response => {
@@ -16,6 +20,11 @@ const Procurement = () => {
                 console.error('Error fetching suppliers:', err)
                 setError('Tedarikçi listesi yüklenirken hata oluştu.')
             })
+
+        // İlaçları da çek (Dropdown için)
+        api.get('/inventory/medicines/')
+            .then(res => setMedicines(res.data))
+            .catch(err => console.error("İlaçlar yüklenemedi", err))
     }, [])
     const [showModal, setShowModal] = useState(false)
     const [newItem, setNewItem] = useState({ name: '', phone_number_proc: '', address_proc: '', email: '' })
@@ -74,11 +83,14 @@ const Procurement = () => {
         if (!emailData.supplierId) return
 
         try {
-            // Backend endpoint confirmed: /procurement/<id>/send-email/
-            await api.post(`/procurement/${emailData.supplierId}/send-email/`, emailData)
+            // Backend endpoint confirmed: /procurement/<id>/send-order/
+            // Hem items hem message gönderiyoruz artık
+            const payload = { ...emailData, items: orderList };
+            await api.post(`/procurement/${emailData.supplierId}/send-order/`, payload)
             setMessageData({ type: 'success', message: 'E-posta başarıyla gönderildi!' })
             setEmailModal(false)
             setEmailData({ subject: '', message: '', supplierId: null })
+            setOrderList([]) // Listeyi temizle
         } catch (err: any) {
             console.error('Mail hatası:', err)
             const msg = err.response?.data?.detail || err.message
@@ -124,11 +136,11 @@ const Procurement = () => {
                 </div>
             )}
 
-            {/* EMAIL MODAL */}
+            {/* EMAIL MODAL (SİPARİŞ OLUŞTURMA) */}
             {emailModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl w-96">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">E-Posta Gönder</h2>
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-[500px] max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Sipariş Maili Gönder</h2>
                         <form onSubmit={handleSendEmail}>
                             <div className="mb-4">
                                 <label className="block text-gray-700 text-sm font-bold mb-2">Konu</label>
@@ -140,16 +152,80 @@ const Procurement = () => {
                                     onChange={e => setEmailData({ ...emailData, subject: e.target.value })}
                                 />
                             </div>
+
+                            {/* Ürün Seçme Kısmı */}
+                            <div className="mb-4 border p-3 rounded bg-gray-50">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Sipariş Listesine Ürün Ekle</label>
+                                <div className="flex gap-2 mb-2">
+                                    <select
+                                        className="border p-2 flex-1 rounded text-sm"
+                                        id="productSelect"
+                                    >
+                                        <option value="">-- İlaç Seçin --</option>
+                                        {medicines.map((med: any) => (
+                                            <option key={med.id} value={med.name}>{med.name}</option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        type="number"
+                                        placeholder="Adet"
+                                        className="border p-2 w-20 rounded text-sm"
+                                        id="quantityInput"
+                                        defaultValue={1}
+                                        min={1}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const select = document.getElementById('productSelect') as HTMLSelectElement;
+                                            const input = document.getElementById('quantityInput') as HTMLInputElement;
+                                            const name = select.value;
+                                            const quantity = Number(input.value);
+
+                                            if (!name) return;
+
+                                            setOrderList([...orderList, { name, quantity }]);
+                                            select.value = "";
+                                            input.value = "1";
+                                        }}
+                                        className="bg-green-600 text-white px-3 rounded text-sm hover:bg-green-700"
+                                    >
+                                        Ekle
+                                    </button>
+                                </div>
+
+                                {/* Eklenen Ürünler */}
+                                {orderList.length > 0 && (
+                                    <div className="mt-2 bg-white border rounded">
+                                        <ul>
+                                            {orderList.map((item, index) => (
+                                                <li key={index} className="flex justify-between p-2 border-b last:border-0 text-sm">
+                                                    <span>{item.name} - <b>{item.quantity} Adet</b></span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setOrderList(orderList.filter((_, i) => i !== index))}
+                                                        className="text-red-500 hover:text-red-700"
+                                                    >
+                                                        Sil
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">Mesaj</label>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Ek Mesaj (Opsiyonel)</label>
                                 <textarea
-                                    required
                                     className="border p-2 w-full rounded"
-                                    rows={5}
+                                    rows={3}
+                                    placeholder="Eklemek istediğiniz notlar..."
                                     value={emailData.message}
                                     onChange={e => setEmailData({ ...emailData, message: e.target.value })}
                                 />
                             </div>
+
                             <div className="flex justify-end gap-2">
                                 <button
                                     type="button"
@@ -162,7 +238,7 @@ const Procurement = () => {
                                     type="submit"
                                     className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
                                 >
-                                    Gönder
+                                    Siparişi Gönder
                                 </button>
                             </div>
                         </form>

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; //React router
 import Inventory from './pages/inventory';
 import Patients from './pages/patients';
 import Procurement from './pages/procurement';

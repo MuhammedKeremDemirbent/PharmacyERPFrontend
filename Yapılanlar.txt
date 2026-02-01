@@ -17,6 +17,9 @@ Sırada görselleri kaldırdık backend kısmında biten ilaçlar için uyarı s
 .env eklendi şifreler vs oraya yazıldı. 
 
 Devamında frontend kısmında müşteri girme yeri eklendi ve satış yapılırken müşteri seçimi eklendi
+Müşteri kaydetme ve eczacı ile müşteriyi databaseye ekledik
 00.00 da smtp ile mail gönderme sistemi eklendi günlük ciro yazıyor
 
 01.02.2026 tarihinde birazcık kodları incele eksiklerini düzelt
+
+Tedarikçiye mail atma müşteriye p.tesileri mail atma e fiş atma 

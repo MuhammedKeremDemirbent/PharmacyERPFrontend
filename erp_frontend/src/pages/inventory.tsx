@@ -4,19 +4,28 @@ import Message from '../components/Message'
 
 const Inventory = () => {
     const [medicines, setMedicines] = useState([])
-    const [error, setError] = useState('') // This might be kept for inline fetching errors or removed if we strictly use the modal. I'll keep it for table loading errors but use Modal for actions.
+    const [suppliers, setSuppliers] = useState([]) // YENİ: Tedarikçi listesi
+    const [error, setError] = useState('')
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<number | null>(null)
 
     // Custom Message State
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string;
+        expiry_date: string;
+        price: string;
+        form_type: string;
+        how_many: number;
+        supplier: string | number | null;
+    }>({
         name: '',
         expiry_date: '',
         price: '',
         form_type: 'TABLET',
-        how_many: 0
+        how_many: 0,
+        supplier: '' // data için tedarikçi
     })
 
     const fetchMedicines = async () => {
@@ -25,12 +34,23 @@ const Inventory = () => {
             setMedicines(response.data)
         } catch (err) {
             console.error(err)
-            setError('Veri çekilemedi.') // Optional: Use modal here too if desired, but maybe intrusive on load.
+            setError('Veri çekilemedi.')
+        }
+    }
+
+    // YENİ: Tedarikçileri çeken fonksiyon
+    const fetchSuppliers = async () => {
+        try {
+            const response = await api.get('/procurement/procurements/')
+            setSuppliers(response.data)
+        } catch (err) {
+            console.error("Tedarikçiler çekilemedi", err)
         }
     }
 
     useEffect(() => {
         fetchMedicines()
+        fetchSuppliers() // Sayfa açılınca tedarikçileri de çek
     }, [])
 
     const handleSave = async (e: React.FormEvent) => {
@@ -70,7 +90,8 @@ const Inventory = () => {
             expiry_date: '',
             price: '',
             form_type: 'TABLET',
-            how_many: 0
+            how_many: 0,
+            supplier: ''
         })
         setEditingId(null)
     }
@@ -82,7 +103,8 @@ const Inventory = () => {
             expiry_date: med.expiry_date,
             price: med.price,
             form_type: med.form_type,
-            how_many: med.how_many
+            how_many: med.how_many,
+            supplier: med.supplier || ''
         })
         setShowModal(true)
     }
@@ -94,7 +116,6 @@ const Inventory = () => {
 
     return (
         <div className="container mx-auto p-4">
-            {/* Custom Message Modal */}
             {messageData && (
                 <Message
                     type={messageData.type}
@@ -179,7 +200,6 @@ const Inventory = () => {
                 </table>
             </div>
 
-            {/* MODAL */}
             {showModal && (
                 <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40 flex items-center justify-center">
                     <div className="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
