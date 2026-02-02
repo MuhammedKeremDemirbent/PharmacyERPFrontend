@@ -23,3 +23,5 @@ Müşteri kaydetme ve eczacı ile müşteriyi databaseye ekledik
 01.02.2026 tarihinde birazcık kodları incele eksiklerini düzelt
 
 Tedarikçiye mail atma müşteriye p.tesileri mail atma e fiş atma 
+
+02.02.2026 SADECE DATABASE(SALES) KISMI UTC AYARI DÜZELTİLDİ. DATABASE UTC BİZ TR SAATİNE GÖRE GÖRÜYORUZ.
