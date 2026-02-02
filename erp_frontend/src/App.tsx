@@ -4,7 +4,7 @@ import Patients from './pages/patients';
 import Procurement from './pages/procurement';
 import MainPOS from './pages/main';
 import RegisterEmployee from './pages/RegisterEmployee';
-import Login from './pages/Login'; // Yeni Login sayfası
+import Login from './pages/Login'; //Login sayfası
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import './App.css'
