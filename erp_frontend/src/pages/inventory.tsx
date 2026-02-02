@@ -4,7 +4,7 @@ import Message from '../components/Message'
 
 const Inventory = () => {
     const [medicines, setMedicines] = useState([])
-    const [suppliers, setSuppliers] = useState([]) // YENİ: Tedarikçi listesi
+    const [suppliers, setSuppliers] = useState([])
     const [error, setError] = useState('')
     const [showModal, setShowModal] = useState(false)
     const [editingId, setEditingId] = useState<number | null>(null)
@@ -50,7 +50,7 @@ const Inventory = () => {
 
     useEffect(() => {
         fetchMedicines()
-        fetchSuppliers() // Sayfa açılınca tedarikçileri de çek
+        fetchSuppliers()
     }, [])
 
     const handleSave = async (e: React.FormEvent) => {

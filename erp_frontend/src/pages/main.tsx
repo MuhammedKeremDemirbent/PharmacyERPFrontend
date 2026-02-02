@@ -12,7 +12,6 @@ const MainPOS = () => {
     const [processing, setProcessing] = useState(false) // Satış işlemi sırası
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
-    // CRM: Müşteri Seçimi
     const [patients, setPatients] = useState([])
     const [selectedPatient, setSelectedPatient] = useState<number | null>(null)
 
@@ -40,9 +39,7 @@ const MainPOS = () => {
             })
     }
 
-    // Sepete Ekle
     const addToBasket = (product: any) => {
-        // Stok kontrolü (İsteğe bağlı, şimdilik sadece görsel uyarı verebiliriz)
         if (product.how_many <= 0) {
             if (product.how_many <= 0) {
                 setMessageData({ type: 'warning', message: 'Bu ürün stokta yok!' })
@@ -68,12 +65,9 @@ const MainPOS = () => {
         })
     }
 
-    // Sepetten Çıkar
     const removeFromBasket = (productId: number) => {
         setBasket(prev => prev.filter(item => item.product.id !== productId))
     }
-
-    // Miktar Azalt
     const decreaseQuantity = (productId: number) => {
         setBasket(prev => {
             return prev.map(item => {
@@ -92,13 +86,12 @@ const MainPOS = () => {
         setProcessing(true);
 
         try {
-            // Backend'in beklediği formatı hazırlıyoruz
             const payload = {
                 items: basket.map(item => ({
                     product_id: item.product.id,
                     quantity: item.count
                 })),
-                patient_id: selectedPatient // CRM: Seçili hastayı gönder
+                patient_id: selectedPatient
             };
 
             // API'ye POST isteği at
@@ -108,12 +101,12 @@ const MainPOS = () => {
             console.log("Satış başarılı:", response.data);
             setMessageData({ type: 'success', title: 'Satış Başarılı!', message: `Satış ID: #${response.data.sale_id}\nToplam Tutar: ₺${response.data.total}` });
 
-            setBasket([]); // Sepeti temizle
-            setSelectedPatient(null); // Müşteri seçimini sıfırla
-            fetchProducts(); // Stokları güncelle (Backend'den yeni halini çek)
+            setBasket([]);
+            setSelectedPatient(null);
+            fetchProducts();
 
         } catch (error: any) {
-            console.error("Satış hatası:", error); // Konsola detaylı yaz
+            console.error("Satış hatası:", error);
 
             const errorMessage = error.response?.data?.error || "Satış işlemi sırasında bir hata oluştu.";
             setMessageData({ type: 'error', message: `Hata: ${errorMessage}` });
@@ -122,12 +115,9 @@ const MainPOS = () => {
         }
     }
 
-    // Arama Filtresi
     const filteredProducts = products.filter((p: any) =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
-
-    // Toplam Tutar
     const totalAmount = basket.reduce((total, item) => total + (item.product.price * item.count), 0);
 
     if (loading) return <div className="p-10 text-center">Sistem Yükleniyor...</div>

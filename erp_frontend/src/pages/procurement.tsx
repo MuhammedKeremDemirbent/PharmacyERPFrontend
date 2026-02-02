@@ -21,7 +21,7 @@ const Procurement = () => {
                 setError('Tedarikçi listesi yüklenirken hata oluştu.')
             })
 
-        // İlaçları da çek (Dropdown için)
+        // İlaçları çek
         api.get('/inventory/medicines/')
             .then(res => setMedicines(res.data))
             .catch(err => console.error("İlaçlar yüklenemedi", err))
@@ -31,16 +31,14 @@ const Procurement = () => {
     const [editingId, setEditingId] = useState<number | null>(null)
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
-    // Kaydet (Hem Ekleme hem Güncelleme)
+    // Kaydet
     const handleSaveSupplier = async (e: React.FormEvent) => {
         e.preventDefault()
         try {
             if (editingId) {
-                // GÜNCELLEME (PUT)
                 await api.put(`/procurement/${editingId}/`, newItem)
                 setMessageData({ type: 'success', message: 'Tedarikçi güncellendi!' })
             } else {
-                // YENİ EKLEME (POST)
                 await api.post('/procurement/', newItem)
                 setMessageData({ type: 'success', message: 'Tedarikçi eklendi!' })
             }
@@ -83,14 +81,12 @@ const Procurement = () => {
         if (!emailData.supplierId) return
 
         try {
-            // Backend endpoint confirmed: /procurement/<id>/send-order/
-            // Hem items hem message gönderiyoruz artık
             const payload = { ...emailData, items: orderList };
             await api.post(`/procurement/${emailData.supplierId}/send-order/`, payload)
             setMessageData({ type: 'success', message: 'E-posta başarıyla gönderildi!' })
             setEmailModal(false)
             setEmailData({ subject: '', message: '', supplierId: null })
-            setOrderList([]) // Listeyi temizle
+            setOrderList([])
         } catch (err: any) {
             console.error('Mail hatası:', err)
             const msg = err.response?.data?.detail || err.message
