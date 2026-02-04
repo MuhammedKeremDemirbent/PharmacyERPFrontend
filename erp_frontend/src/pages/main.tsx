@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
-import Message from '../components/Message'
+import Alert from '../components/molecules/Alert'
+import Button from '../components/atoms/Button'
+import Input from '../components/atoms/Input'
+import { useDispatch, useSelector } from 'react-redux'
+import type { RootState } from '../store/store'
+import { addToCart, removeFromCart, decreaseQuantity, clearCart } from '../store/slices/cartSlice'
+import { setMedicines } from '../store/slices/medicineSlice'
 
 // POS Sistemi için Satış Ekranı
 const MainPOS = () => {
     // State Tanımları
-    const [products, setProducts] = useState([]) // Tüm ürünler
-    const [basket, setBasket] = useState<{ product: any, count: number }[]>([]) // Sepet
     const [searchTerm, setSearchTerm] = useState('') // Arama
     const [loading, setLoading] = useState(true)
     const [processing, setProcessing] = useState(false) // Satış işlemi sırası
@@ -15,8 +19,18 @@ const MainPOS = () => {
     const [patients, setPatients] = useState([])
     const [selectedPatient, setSelectedPatient] = useState<number | null>(null)
 
+    // REDUX BAĞLANTISI
+    const dispatch = useDispatch();
+    const basket = useSelector((state: RootState) => state.cart.items);
+    const products = useSelector((state: RootState) => state.medicine.list);
+
     useEffect(() => {
-        fetchProducts()
+        // Redux Cache Check
+        if (products.length === 0) {
+            fetchProducts()
+        } else {
+            setLoading(false)
+        }
         fetchPatients()
     }, [])
 
@@ -30,7 +44,7 @@ const MainPOS = () => {
         setLoading(true)
         api.get('/inventory/medicines/')
             .then(response => {
-                setProducts(response.data)
+                dispatch(setMedicines(response.data)) // Redux'a kaydet
                 setLoading(false)
             })
             .catch(error => {
@@ -39,44 +53,16 @@ const MainPOS = () => {
             })
     }
 
-    const addToBasket = (product: any) => {
-        if (product.how_many <= 0) {
-            if (product.how_many <= 0) {
-                setMessageData({ type: 'warning', message: 'Bu ürün stokta yok!' })
-                return;
-            }
-        }
-
-        setBasket(prev => {
-            const existing = prev.find(item => item.product.id === product.id)
-            if (existing) {
-                // Eğer sepetteki miktar stoktan fazlaysa uyarı ver
-                if (existing.count >= product.how_many) {
-                    if (existing.count >= product.how_many) {
-                        setMessageData({ type: 'warning', message: 'Yetersiz stok!' })
-                        return prev;
-                    }
-                }
-                return prev.map(item =>
-                    item.product.id === product.id ? { ...item, count: item.count + 1 } : item
-                )
-            }
-            return [...prev, { product, count: 1 }]
-        })
+    const handleAddToBasket = (product: any) => {
+        dispatch(addToCart(product));
     }
 
-    const removeFromBasket = (productId: number) => {
-        setBasket(prev => prev.filter(item => item.product.id !== productId))
+    const handleRemoveFromBasket = (productId: number) => {
+        dispatch(removeFromCart(productId));
     }
-    const decreaseQuantity = (productId: number) => {
-        setBasket(prev => {
-            return prev.map(item => {
-                if (item.product.id === productId) {
-                    return item.count > 1 ? { ...item, count: item.count - 1 } : item
-                }
-                return item
-            })
-        })
+
+    const handleDecreaseQuantity = (productId: number) => {
+        dispatch(decreaseQuantity(productId));
     }
 
     // Satışı Tamamla
@@ -101,15 +87,37 @@ const MainPOS = () => {
             console.log("Satış başarılı:", response.data);
             setMessageData({ type: 'success', title: 'Satış Başarılı!', message: `Satış ID: #${response.data.sale_id}\nToplam Tutar: ₺${response.data.total}` });
 
-            setBasket([]);
+            dispatch(clearCart()); // Sepeti temizle (Redux)
             setSelectedPatient(null);
             fetchProducts();
 
         } catch (error: any) {
             console.error("Satış hatası:", error);
 
-            const errorMessage = error.response?.data?.error || "Satış işlemi sırasında bir hata oluştu.";
-            setMessageData({ type: 'error', message: `Hata: ${errorMessage}` });
+            let errorMessage = "Satış işlemi sırasında bir hata oluştu.";
+
+            if (error.response) {
+                const data = error.response.data;
+                const contentType = error.response.headers?.['content-type'];
+
+                if (contentType && contentType.includes('text/html')) {
+                    errorMessage = "Sunucu tarafında kritik bir hata oluştu (500).";
+                } else if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data?.detail) {
+                    errorMessage = data.detail;
+                } else if (data?.error) {
+                    errorMessage = data.error;
+                } else if (data?.non_field_errors) {
+                    errorMessage = data.non_field_errors[0];
+                } else {
+                    errorMessage = JSON.stringify(data);
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            setMessageData({ type: 'error', title: 'Hata!', message: errorMessage });
         } finally {
             setProcessing(false);
         }
@@ -118,14 +126,14 @@ const MainPOS = () => {
     const filteredProducts = products.filter((p: any) =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
-    const totalAmount = basket.reduce((total, item) => total + (item.product.price * item.count), 0);
+    const totalAmount = basket.reduce((total, item) => total + (item.count * Number(item.product.price)), 0);
 
     if (loading) return <div className="p-10 text-center">Sistem Yükleniyor...</div>
 
     return (
         <div className="flex h-full overflow-hidden bg-gray-100 rounded-lg shadow-sm border border-gray-200">
             {messageData && (
-                <Message
+                <Alert
                     type={messageData.type}
                     title={messageData.title}
                     message={messageData.message}
@@ -135,10 +143,10 @@ const MainPOS = () => {
             {/* SOL TARAF: ÜRÜN LİSTESİ */}
             <div className="w-2/3 p-4 flex flex-col overflow-hidden">
                 <div className="mb-4">
-                    <input
+                    <Input
                         type="text"
                         placeholder="Barkod okutun veya ilaç adı arayın..."
-                        className="w-full p-4 text-lg border-2 border-blue-300 rounded-lg shadow-sm focus:outline-none focus:border-blue-500"
+                        className="text-lg p-4 h-auto"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         autoFocus
@@ -149,7 +157,7 @@ const MainPOS = () => {
                     {filteredProducts.map((product: any) => (
                         <div
                             key={product.id}
-                            onClick={() => addToBasket(product)}
+                            onClick={() => handleAddToBasket(product)}
                             className={`cursor-pointer bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all border-l-4 flex justify-between items-center ${product.how_many > 0 ? 'border-green-500' : 'border-red-500 hover:bg-red-50'}`}
                         >
                             <div className="flex-1">
@@ -181,7 +189,7 @@ const MainPOS = () => {
 
                 {/* CRM: MÜŞTERİ SEÇİMİ */}
                 <div className="p-3 bg-blue-50 border-b border-blue-100">
-                    <label className="block text-xs font-bold text-blue-800 mb-1">Müşteri Seç (Opsiyonel)</label>
+                    <label className="block text-xs font-bold text-blue-800 mb-1">Müşteri Seç</label>
                     <select
                         className="w-full p-2 border border-blue-300 rounded text-sm focus:outline-none focus:border-blue-500"
                         value={selectedPatient || ''}
@@ -214,23 +222,29 @@ const MainPOS = () => {
 
                                     <div className="flex items-center space-x-3">
                                         <div className="flex items-center bg-white rounded-lg border border-gray-300">
-                                            <button
-                                                onClick={() => decreaseQuantity(item.product.id)}
-                                                className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-l"
-                                            >-</button>
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                onClick={() => handleDecreaseQuantity(item.product.id)}
+                                                className="rounded-r-none"
+                                            >-</Button>
                                             <span className="px-2 font-bold text-gray-800">{item.count}</span>
-                                            <button
-                                                onClick={() => addToBasket(item.product)}
-                                                className="px-2 py-1 text-green-600 hover:bg-gray-100 rounded-r"
-                                            >+</button>
+                                            <Button
+                                                size="sm"
+                                                variant="success"
+                                                onClick={() => handleAddToBasket(item.product)}
+                                                className="rounded-l-none"
+                                            >+</Button>
                                         </div>
                                         <div className="font-bold text-gray-800 w-16 text-right">
-                                            ₺{(item.product.price * item.count).toFixed(2)}
+                                            ₺{(item.count * Number(item.product.price)).toFixed(2)}
                                         </div>
-                                        <button
-                                            onClick={() => removeFromBasket(item.product.id)}
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleRemoveFromBasket(item.product.id)}
                                             className="text-red-500 hover:text-red-700 p-1"
-                                        >✕</button>
+                                        >✕</Button>
                                     </div>
                                 </div>
                             ))}
@@ -245,16 +259,17 @@ const MainPOS = () => {
                         <span className="text-4xl font-bold text-blue-700">₺{totalAmount.toFixed(2)}</span>
                     </div>
 
-                    <button
+                    <Button
                         onClick={handleCheckout}
                         disabled={basket.length === 0 || processing}
+                        size="lg"
                         className={`w-full py-4 rounded-xl text-white font-bold text-xl shadow-lg transform transition-transform active:scale-95 ${basket.length === 0
                             ? 'bg-gray-400 cursor-not-allowed'
                             : 'bg-green-600 hover:bg-green-700'
                             }`}
                     >
                         {processing ? 'İşleniyor...' : 'SATIŞI TAMAMLA'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

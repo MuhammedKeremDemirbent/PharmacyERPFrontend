@@ -1,18 +1,18 @@
 import React from 'react';
+import Button from '../atoms/Button';
 
-interface MessageProps {
+export interface AlertProps {
     type: 'success' | 'error' | 'warning';
     title?: string;
     message: string;
     onClose: () => void;
 }
 
-const Message: React.FC<MessageProps> = ({ type, title, message, onClose }) => {
-    // Renk ve ikon belirleme
+const Alert: React.FC<AlertProps> = ({ type, title, message, onClose }) => {
 
-    let titleColor = 'text-gray-900';
     let icon = null;
-    let buttonColor = 'bg-purple-600 hover:bg-purple-700';
+    let titleColor = 'text-gray-900';
+    let buttonVariant: 'success' | 'danger' | 'warning' = 'success';
 
     if (type === 'success') {
         icon = (
@@ -23,7 +23,7 @@ const Message: React.FC<MessageProps> = ({ type, title, message, onClose }) => {
             </div>
         );
         title = title || 'İşlem Başarılı!';
-        buttonColor = 'bg-green-600 hover:bg-green-700';
+        buttonVariant = 'success';
     } else if (type === 'error') {
         icon = (
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-4">
@@ -33,7 +33,7 @@ const Message: React.FC<MessageProps> = ({ type, title, message, onClose }) => {
             </div>
         );
         title = title || 'Bir Hata Oluştu!';
-        buttonColor = 'bg-red-600 hover:bg-red-700';
+        buttonVariant = 'danger';
     } else if (type === 'warning') {
         icon = (
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 mb-4">
@@ -43,7 +43,7 @@ const Message: React.FC<MessageProps> = ({ type, title, message, onClose }) => {
             </div>
         );
         title = title || 'Dikkat!';
-        buttonColor = 'bg-yellow-600 hover:bg-yellow-700';
+        buttonVariant = 'warning';
     }
 
     return (
@@ -58,13 +58,13 @@ const Message: React.FC<MessageProps> = ({ type, title, message, onClose }) => {
                         {message}
                     </p>
                     <div className="mt-4">
-                        <button
-                            type="button"
-                            className={`w-full inline-flex justify-center rounded-xl border border-transparent px-6 py-3 text-base font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${buttonColor} transition-colors duration-200`}
+                        <Button
+                            variant={buttonVariant}
+                            className="w-full"
                             onClick={onClose}
                         >
                             Tamam
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -72,4 +72,4 @@ const Message: React.FC<MessageProps> = ({ type, title, message, onClose }) => {
     );
 };
 
-export default Message;
+export default Alert;

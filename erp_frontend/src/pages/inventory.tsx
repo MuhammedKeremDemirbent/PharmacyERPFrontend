@@ -1,123 +1,65 @@
-import { useEffect, useState } from 'react'
-import api from '../api'
-import Message from '../components/Message'
+import { useState } from 'react'
+import Alert from '../components/molecules/Alert'
+import Button from '../components/atoms/Button'
+import MedicineForm from '../components/organisms/forms/MedicineForm'
+import { useMedicines } from '../hooks/useMedicines'
+import { useSuppliers } from '../hooks/useSuppliers'
+import type { Medicine } from '../types'
 
 const Inventory = () => {
-    const [medicines, setMedicines] = useState([])
-    const [suppliers, setSuppliers] = useState([])
-    const [error, setError] = useState('')
-    const [showModal, setShowModal] = useState(false)
-    const [editingId, setEditingId] = useState<number | null>(null)
+    // HOOKS
+    const { medicines, error: medError, deleteMedicine, addMedicine, updateMedicine } = useMedicines()
+    const { suppliers } = useSuppliers() // Tedarikçiler form için lazım
 
-    // Custom Message State
+    // LOCAL STATE
+    const [showModal, setShowModal] = useState(false)
+    const [editingMed, setEditingMed] = useState<Partial<Medicine> | undefined>(undefined)
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
-    const [formData, setFormData] = useState<{
-        name: string;
-        expiry_date: string;
-        price: string;
-        form_type: string;
-        how_many: number;
-        supplier: string | number | null;
-    }>({
-        name: '',
-        expiry_date: '',
-        price: '',
-        form_type: 'TABLET',
-        how_many: 0,
-        supplier: '' // data için tedarikçi
-    })
-
-    const fetchMedicines = async () => {
-        try {
-            const response = await api.get('/inventory/medicines/')
-            setMedicines(response.data)
-        } catch (err) {
-            console.error(err)
-            setError('Veri çekilemedi.')
+    // HANDLERS
+    const handleSave = async (formData: any) => {
+        let result;
+        if (editingMed && editingMed.id) {
+            result = await updateMedicine(editingMed.id, formData);
+        } else {
+            result = await addMedicine(formData);
         }
-    }
 
-    // YENİ: Tedarikçileri çeken fonksiyon
-    const fetchSuppliers = async () => {
-        try {
-            const response = await api.get('/procurement/procurements/')
-            setSuppliers(response.data)
-        } catch (err) {
-            console.error("Tedarikçiler çekilemedi", err)
-        }
-    }
-
-    useEffect(() => {
-        fetchMedicines()
-        fetchSuppliers()
-    }, [])
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault()
-        try {
-            if (editingId) {
-                await api.put(`/inventory/medicines/${editingId}/`, formData)
-                setMessageData({ type: 'success', message: 'İlaç başarıyla güncellendi!' })
-            } else {
-                await api.post('/inventory/medicines/', formData)
-                setMessageData({ type: 'success', message: 'İlaç başarıyla eklendi!' })
-            }
+        if (result.success) {
+            setMessageData({
+                type: 'success',
+                message: editingMed ? 'İlaç başarıyla güncellendi!' : 'İlaç başarıyla eklendi!'
+            })
             setShowModal(false)
-            fetchMedicines()
-            resetForm()
-        } catch (err) {
-            console.error(err)
-            setMessageData({ type: 'error', message: 'İşlem sırasında bir hata oluştu.' })
+        } else {
+            setMessageData({ type: 'error', message: result.error || 'İşlem başarısız.' })
         }
     }
 
     const handleDelete = async (id: number) => {
         if (!window.confirm('Bu ilacı silmek istediğinize emin misiniz?')) return
-        try {
-            await api.delete(`/inventory/medicines/${id}/`)
+        const result = await deleteMedicine(id)
+        if (result.success) {
             setMessageData({ type: 'success', message: 'İlaç başarıyla silindi.' })
-            fetchMedicines()
-        } catch (err) {
-            console.error(err)
-            setMessageData({ type: 'error', message: 'Silme işlemi başarısız.' })
+        } else {
+            setMessageData({ type: 'error', message: result.error || 'Silme işlemi başarısız.' })
         }
     }
 
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            expiry_date: '',
-            price: '',
-            form_type: 'TABLET',
-            how_many: 0,
-            supplier: ''
-        })
-        setEditingId(null)
-    }
-
-    const openEdit = (med: any) => {
-        setEditingId(med.id)
-        setFormData({
-            name: med.name,
-            expiry_date: med.expiry_date,
-            price: med.price,
-            form_type: med.form_type,
-            how_many: med.how_many,
-            supplier: med.supplier || ''
-        })
+    const openEdit = (med: Medicine) => {
+        setEditingMed(med)
         setShowModal(true)
     }
 
     const openNew = () => {
-        resetForm()
+        setEditingMed(undefined)
         setShowModal(true)
     }
 
     return (
         <div className="container mx-auto p-4">
             {messageData && (
-                <Message
+                <Alert
                     type={messageData.type}
                     title={messageData.title}
                     message={messageData.message}
@@ -125,51 +67,34 @@ const Inventory = () => {
                 />
             )}
 
+            {medError && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">{medError}</div>}
+
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">Eczane Stok Listesi</h1>
-                <button
-                    onClick={openNew}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg transition duration-200 flex items-center"
-                >
+                <Button onClick={openNew}>
                     + İlaç Ekle
-                </button>
+                </Button>
             </div>
-
-            {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">{error}</div>}
 
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 <table className="min-w-full leading-normal">
                     <thead>
                         <tr>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                İlaç Adı
-                            </th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                Form
-                            </th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                SKT
-                            </th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                Stok
-                            </th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                Fiyat
-                            </th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                İşlemler
-                            </th>
+                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">İlaç Adı</th>
+                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Form</th>
+                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SKT</th>
+                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stok</th>
+                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fiyat</th>
+                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {medicines.map((med: any) => (
+                        {medicines.map((med) => (
                             <tr key={med.id} className="hover:bg-gray-50 transition duration-150">
                                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                                     <div className="flex items-center">
                                         <div className="ml-3">
-                                            <p className="text-gray-900 whitespace-no-wrap font-semibold">
-                                                {med.name}
-                                            </p>
+                                            <p className="text-gray-900 whitespace-no-wrap font-semibold">{med.name}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -177,9 +102,7 @@ const Inventory = () => {
                                     <p className="text-gray-900 whitespace-no-wrap">{med.form_type}</p>
                                 </td>
                                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <p className={`text-gray-900 whitespace-no-wrap`}>
-                                        {med.expiry_date}
-                                    </p>
+                                    <p className="text-gray-900 whitespace-no-wrap">{med.expiry_date}</p>
                                 </td>
                                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                                     <span className={`relative inline-block px-3 py-1 font-semibold leading-tight ${med.how_many < 10 ? 'text-red-900' : 'text-green-900'}`}>
@@ -191,8 +114,10 @@ const Inventory = () => {
                                     <p className="text-gray-900 whitespace-no-wrap">₺{med.price}</p>
                                 </td>
                                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <button onClick={() => openEdit(med)} className="text-blue-600 hover:text-blue-900 mr-4 transition duration-150">Düzenle</button>
-                                    <button onClick={() => handleDelete(med.id)} className="text-red-600 hover:text-red-900 transition duration-150">Sil</button>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-900" onClick={() => openEdit(med)}>Düzenle</Button>
+                                        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-900" onClick={() => handleDelete(med.id)}>Sil</Button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -204,83 +129,15 @@ const Inventory = () => {
                 <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40 flex items-center justify-center">
                     <div className="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
                         <div className="mt-3">
-                            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">{editingId ? 'İlaç Düzenle' : 'Yeni İlaç Ekle'}</h3>
-                            <form onSubmit={handleSave}>
-                                <div className="mb-3">
-                                    <label className="block text-gray-700 text-sm font-bold mb-2">İlaç Adı</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="mb-3">
-                                    <label className="block text-gray-700 text-sm font-bold mb-2">İlaç Formu</label>
-                                    <select
-                                        required
-                                        className="border p-2 w-full rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={formData.form_type}
-                                        onChange={e => setFormData({ ...formData, form_type: e.target.value })}
-                                    >
-                                        <option value="TABLET">Hap / Tablet</option>
-                                        <option value="LIQUID">Sıvı / Şurup</option>
-                                        <option value="OTHER">Diğer</option>
-                                    </select>
-                                </div>
-
-                                <div className="mb-3">
-                                    <label className="block text-gray-700 text-sm font-bold mb-2">Son Kullanma Tarihi</label>
-                                    <input
-                                        required
-                                        type="date"
-                                        className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={formData.expiry_date}
-                                        onChange={e => setFormData({ ...formData, expiry_date: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="mb-3">
-                                    <label className="block text-gray-700 text-sm font-bold mb-2">Stok Adedi</label>
-                                    <input
-                                        required
-                                        type="number"
-                                        className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={formData.how_many}
-                                        onChange={e => setFormData({ ...formData, how_many: Number(e.target.value) })}
-                                    />
-                                </div>
-
-                                <div className="mb-3">
-                                    <label className="block text-gray-700 text-sm font-bold mb-2">Fiyat (₺)</label>
-                                    <input
-                                        required
-                                        type="number"
-                                        step="0.01"
-                                        className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={formData.price}
-                                        onChange={e => setFormData({ ...formData, price: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-2 mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModal(false)}
-                                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition duration-200"
-                                    >
-                                        İptal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200"
-                                    >
-                                        Kaydet
-                                    </button>
-                                </div>
-                            </form>
+                            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                                {editingMed ? 'İlaç Düzenle' : 'Yeni İlaç Ekle'}
+                            </h3>
+                            <MedicineForm
+                                initialData={editingMed}
+                                suppliers={suppliers}
+                                onSubmit={handleSave}
+                                onCancel={() => setShowModal(false)}
+                            />
                         </div>
                     </div>
                 </div>

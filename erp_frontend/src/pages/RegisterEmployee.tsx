@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import api from '../api'
-import Message from '../components/Message'
+import Alert from '../components/molecules/Alert'
+import Button from '../components/atoms/Button'
+import FormField from '../components/molecules/FormField'
+import Input from '../components/atoms/Input'
 
 const RegisterEmployee = () => {
     // PIN Koruması State'leri
@@ -81,21 +84,23 @@ const RegisterEmployee = () => {
                     <p className="text-gray-600 mb-6 text-sm">Personel kaydı oluşturmak için lütfen yönetici erişim kodunu giriniz.</p>
 
                     <form onSubmit={handlePinSubmit}>
-                        <input
-                            type="password"
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded mb-4 text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="****"
-                            maxLength={4}
-                            autoFocus
-                        />
-                        <button
+                        <div className="mb-4">
+                            <Input
+                                type="password"
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value)}
+                                className="text-center text-lg tracking-widest"
+                                placeholder="****"
+                                maxLength={4}
+                                autoFocus
+                            />
+                        </div>
+                        <Button
                             type="submit"
-                            className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition duration-200"
+                            className="w-full bg-purple-600 hover:bg-purple-700"
                         >
                             Giriş Yap
-                        </button>
+                        </Button>
                     </form>
                     {pinError && <p className="text-red-500 mt-3 text-sm font-bold">{pinError}</p>}
                 </div>
@@ -108,12 +113,13 @@ const RegisterEmployee = () => {
         <div className="container mx-auto p-4 max-w-2xl">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-purple-600">Yeni Personel Kaydı</h1>
-                <button
+                <Button
+                    variant="ghost"
                     onClick={() => setIsAuthenticated(false)}
-                    className="text-sm text-gray-500 hover:text-red-500 underline"
+                    className="text-gray-500 hover:text-red-500 underline"
                 >
                     🔒 Kilitle
-                </button>
+                </Button>
             </div>
 
             <div className="bg-white p-8 rounded-lg shadow-md">
@@ -123,73 +129,56 @@ const RegisterEmployee = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label className="block text-gray-700 font-bold mb-2">Ad</label>
-                            <input
-                                type="text"
-                                required
-                                className="w-full border p-2 rounded focus:outline-none focus:border-purple-500"
-                                value={formData.first_name}
-                                onChange={e => setFormData({ ...formData, first_name: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 font-bold mb-2">Soyad</label>
-                            <input
-                                type="text"
-                                required
-                                className="w-full border p-2 rounded focus:outline-none focus:border-purple-500"
-                                value={formData.last_name}
-                                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-gray-700 font-bold mb-2">Kullanıcı Adı</label>
-                        <input
-                            type="text"
+                        <FormField
+                            label="Ad"
+                            value={formData.first_name}
+                            onChange={e => setFormData({ ...formData, first_name: e.target.value })}
                             required
-                            className="w-full border p-2 rounded focus:outline-none focus:border-purple-500"
-                            value={formData.username}
-                            onChange={e => setFormData({ ...formData, username: e.target.value })}
                         />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-gray-700 font-bold mb-2">E-Posta</label>
-                        <input
-                            type="email"
+                        <FormField
+                            label="Soyad"
+                            value={formData.last_name}
+                            onChange={e => setFormData({ ...formData, last_name: e.target.value })}
                             required
-                            className="w-full border p-2 rounded focus:outline-none focus:border-purple-500"
-                            value={formData.email}
-                            onChange={e => setFormData({ ...formData, email: e.target.value })}
                         />
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-gray-700 font-bold mb-2">Telefon</label>
-                        <input
-                            type="text"
-                            className="w-full border p-2 rounded focus:outline-none focus:border-purple-500"
-                            value={formData.phone}
-                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                        />
-                    </div>
+                    <FormField
+                        label="Kullanıcı Adı"
+                        value={formData.username}
+                        onChange={e => setFormData({ ...formData, username: e.target.value })}
+                        required
+                        className="mb-4"
+                    />
 
-                    <button
+                    <FormField
+                        label="E-Posta"
+                        type="email"
+                        value={formData.email}
+                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                        required
+                        className="mb-4"
+                    />
+
+                    <FormField
+                        label="Telefon"
+                        value={formData.phone}
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                        className="mb-6"
+                    />
+
+                    <Button
                         type="submit"
-                        disabled={loading}
-                        className={`w-full py-3 text-white font-bold rounded transiton duration-200 ${loading ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'
-                            }`}
+                        isLoading={loading}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
                     >
-                        {loading ? 'Kaydediliyor...' : 'Personel Oluştur ve Mail Gönder'}
-                    </button>
+                        Personel Oluştur ve Mail Gönder
+                    </Button>
                 </form>
             </div>
 
             {messageData && (
-                <Message
+                <Alert
                     type={messageData.type}
                     title={messageData.title}
                     message={messageData.message}

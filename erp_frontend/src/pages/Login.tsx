@@ -1,8 +1,14 @@
 import { useState } from "react";
 import api from "../api";
-import Message from "../components/Message";
+import Alert from "../components/molecules/Alert";
+import Button from "../components/atoms/Button";
+import FormField from "../components/molecules/FormField";
+
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../store/slices/authSlice";
 
 const Login = () => {
+    const dispatch = useDispatch();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null);
@@ -19,12 +25,14 @@ const Login = () => {
 
             const { access, refresh } = response.data;
 
-            // Tokenları kaydet
-            localStorage.setItem("access_token", access);
-            localStorage.setItem("refresh_token", refresh);
-            localStorage.setItem("username", username); // Kullanıcı adını kaydet
+            // Tokenları kaydet (Redux üzerinden)
+            dispatch(loginSuccess({
+                user: username,
+                token: access,
+                refreshToken: refresh
+            }));
 
-            // Sayfayı yenile veya yönlendir (App.tsx state'i algılayacak)
+            // Dashboard'a yönlendir
             window.location.href = "/";
 
         } catch (err: any) {
@@ -46,7 +54,7 @@ const Login = () => {
                 </p>
 
                 {messageData && (
-                    <Message
+                    <Alert
                         type={messageData.type}
                         title={messageData.title}
                         message={messageData.message}
@@ -55,42 +63,34 @@ const Login = () => {
                 )}
 
                 <form onSubmit={handleLogin}>
-                    <div className="mb-4">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">
-                            Kullanıcı Adı
-                        </label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-purple-500"
-                            placeholder="admin"
-                            required
-                        />
-                    </div>
+                    <FormField
+                        id="username"
+                        label="Kullanıcı Adı"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="admin"
+                        required
+                    />
 
-                    <div className="mb-6">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">
-                            Şifre
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-purple-500"
-                            placeholder="******"
-                            required
-                        />
-                    </div>
+                    <FormField
+                        id="password"
+                        label="Şifre"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="******"
+                        required
+                        className="mb-8"
+                    />
 
-                    <button
+                    <Button
                         type="submit"
-                        disabled={loading}
-                        className={`w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded transiton duration-200 ${loading ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
+                        isLoading={loading}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
                     >
-                        {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
-                    </button>
+                        Giriş Yap
+                    </Button>
                 </form>
             </div>
         </div>

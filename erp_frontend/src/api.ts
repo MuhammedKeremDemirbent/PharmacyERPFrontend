@@ -1,4 +1,10 @@
 import axios from 'axios';
+import { store } from './store/store';
+import { setAccessToken, logout } from './store/slices/authSlice';
+import { jwtDecode } from 'jwt-decode';
+import { Mutex } from 'async-mutex';
+
+const mutex = new Mutex();
 
 const api = axios.create({
     baseURL: '/api',
@@ -7,10 +13,68 @@ const api = axios.create({
     withCredentials: true // Çerezlerin gönderilmesini sağlar
 });
 
-// Request Interceptor: Her isteğe Token ekle
+// Helper: Token süresi dolmasına 1 dakika (60sn) kaldı mı?
+const isTokenExpired = (token: string): boolean => {
+    try {
+        const decoded: any = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        // Eğer tokenın bitmesine 60 saniyeden az kaldıysa "süresi dolmuş" sayalım ki yenileyelim
+        return decoded.exp < currentTime + 60;
+    } catch (error) {
+        return true; // Bozuksa süresi dolmuş varsay
+    }
+};
+
+// Request Interceptor: Her isteğe Token ekle ve gerekirse yenile
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('access_token');
+    async (config) => {
+        // Eğer istek zaten refresh endpoint'ine ise, araya girme
+        if (config.url?.includes('token/refresh')) {
+            return config;
+        }
+
+        let token = store.getState().auth.token;
+
+        if (token && isTokenExpired(token)) {
+            // Token süresi dolmak üzere! Mutex ile kilitleyip yenileyelim.
+            if (!mutex.isLocked()) {
+                const release = await mutex.acquire();
+                try {
+                    // Yenileme işlemi
+                    const refreshToken = store.getState().auth.refreshToken;
+                    if (refreshToken) {
+                        const response = await axios.post('/api/token/refresh/', {
+                            refresh: refreshToken
+                        });
+                        const newAccessToken = response.data.access;
+
+                        // Redux'ı güncelle
+                        store.dispatch(setAccessToken(newAccessToken));
+
+                        // Token'ı güncelle ki bu istek yeni token ile gitsin
+                        token = newAccessToken;
+                    } else {
+                        // Refresh token yoksa çıkış yap
+                        store.dispatch(logout());
+                        window.location.href = "/";
+                        throw new axios.Cancel("Session expired"); // İsteği iptal et
+                    }
+                } catch (error) {
+                    // Yenileme başarısızsa çıkış yap
+                    store.dispatch(logout());
+                    window.location.href = "/";
+                    throw error;
+                } finally {
+                    release();
+                }
+            } else {
+                // Eğer başkası kilitlediyse, o bitirene kadar bekle
+                await mutex.waitForUnlock();
+                // O bitince güncel token'ı Redux'tan al
+                token = store.getState().auth.token;
+            }
+        }
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -34,7 +98,7 @@ api.interceptors.response.use(
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-            const refreshToken = localStorage.getItem('refresh_token');
+            const refreshToken = store.getState().auth.refreshToken; // Redux'tan oku
 
             if (refreshToken) {
                 try {
@@ -43,7 +107,9 @@ api.interceptors.response.use(
                     });
 
                     const newAccessToken = response.data.access;
-                    localStorage.setItem('access_token', newAccessToken);
+
+                    // Yeni token'ı Redux'a kaydet
+                    store.dispatch(setAccessToken(newAccessToken));
 
                     // Yeni token ile isteği tekrarla
                     originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -51,14 +117,12 @@ api.interceptors.response.use(
                 } catch (refreshError) {
                     console.error("Token yenileme başarısız:", refreshError);
                     // Refresh token de geçersizse çıkış yap
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('refresh_token');
+                    store.dispatch(logout()); // Redux'tan sil
                     window.location.href = "/";
                 }
             } else {
                 // Refresh token yoksa çıkış yap
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
+                store.dispatch(logout());
                 window.location.href = "/";
             }
         }

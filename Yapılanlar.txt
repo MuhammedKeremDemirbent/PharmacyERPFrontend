@@ -25,3 +25,30 @@ Müşteri kaydetme ve eczacı ile müşteriyi databaseye ekledik
 Tedarikçiye mail atma müşteriye p.tesileri mail atma e fiş atma 
 
 02.02.2026 SADECE DATABASE(SALES) KISMI UTC AYARI DÜZELTİLDİ. DATABASE UTC BİZ TR SAATİNE GÖRE GÖRÜYORUZ.
+
+
+redux toolkit ekle 
+redux tooklit axios kullanılcak belki. 
+listenin en başlarına auth store ekle İlaç store olcak, patient store, 
+
+auth store ( auth token , refresh token için ) RTK + redux persist (sadece authta kullan)
+user store: ( user profile bilgileri, user diğer aggregated ya da required relationship için )
+ilaç store: api kullanımı için rtk
+patiente store: api kullanımı için rtk
+...
+auth refresh kur rtk için 1 dk kala req atma refresh atsın tokene.  await mutex.waitForUnlock(); 
+
+
+Görüşmeden Sonra Yapılanlar
+
+npm install @reduxjs/toolkit react-redux indirildi redux toolkit için amaç burada sayfa değişince
+bile sepet bilgileri korunması
+
+npm install redux-persist auth için
+
+store klasörüne sepet ve user için redux eklendi
+
+npm install jwt-decode async-mutex
+
+atom molekül yapısı inşa edildi
+

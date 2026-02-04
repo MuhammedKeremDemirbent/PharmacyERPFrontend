@@ -5,12 +5,14 @@ import Procurement from './pages/procurement';
 import MainPOS from './pages/main';
 import RegisterEmployee from './pages/RegisterEmployee';
 import Login from './pages/Login'; //Login sayfası
-import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
+import MainLayout from './components/templates/MainLayout';
 import './App.css'
 
+import { useSelector } from 'react-redux';
+import type { RootState } from './store/store';
+
 function App() {
-  const isAuthenticated = !!localStorage.getItem('access_token');
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
   if (!isAuthenticated) {
     return <Login />;
@@ -18,28 +20,16 @@ function App() {
 
   return (
     <Router>
-      <div className="flex h-screen bg-gray-100 overflow-hidden">
-        {/* Sol Sidebar*/}
-        <Sidebar />
-
-        {/* Sağ Ana İçerik */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Üst Bar*/}
-          <Navbar />
-
-          {/* Sayfa İçeriği*/}
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-            <Routes>
-              <Route path="/" element={<Inventory />} />
-              <Route path="/patients" element={<Patients />} />
-              <Route path="/procurement" element={<Procurement />} />
-              <Route path="/sales" element={<MainPOS />} />
-              <Route path="/register-employee" element={<RegisterEmployee />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
+      <MainLayout>
+        <Routes>
+          <Route path="/" element={<Inventory />} />
+          <Route path="/patients" element={<Patients />} />
+          <Route path="/procurement" element={<Procurement />} />
+          <Route path="/sales" element={<MainPOS />} />
+          <Route path="/register-employee" element={<RegisterEmployee />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </MainLayout>
     </Router>
   )
 }

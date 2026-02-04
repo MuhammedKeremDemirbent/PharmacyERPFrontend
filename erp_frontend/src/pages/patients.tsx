@@ -1,63 +1,43 @@
-import { useEffect, useState } from 'react'
-import api from '../api'
+import { useState } from 'react'
+import Button from '../components/atoms/Button'
+import Input from '../components/atoms/Input'
+import PatientForm from '../components/organisms/forms/PatientForm'
+import Alert from '../components/molecules/Alert'
+import { usePatients } from '../hooks/usePatients'
+import type { Patient } from '../types'
 
 const Patients = () => {
-    const [patients, setPatients] = useState([])
-    const [error, setError] = useState('')
-    const [showModal, setShowModal] = useState(false)
-    const [formData, setFormData] = useState({
-        first_name: '',
-        last_name: '',
-        phone_number: '',
-        address: '',
-        email: ''
-    })
+    // HOOKS
+    const { patients, error: patientError, fetchPatients, addPatient } = usePatients()
 
-    // Güvenlik için durum değişkenleri
+    // LOCAL STATE
+    const [showModal, setShowModal] = useState(false)
+    const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
+
+    // SECURITY STATE
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [pin, setPin] = useState('')
-    const CORRECT_PIN = "1234" // Eczane hasta database ortak şifresi
+    const CORRECT_PIN = "1234"
 
-    const fetchPatients = () => {
-        if (isAuthenticated) {
-            api.get('/patients/')
-                .then(response => {
-                    console.log('Patients fetched:', response.data)
-                    setPatients(response.data)
-                })
-                .catch(err => {
-                    console.error('Error fetching patients:', err)
-                    setError('Hasta listesi yüklenirken hata oluştu.')
-                })
-        }
-    }
-
-    useEffect(() => {
-        fetchPatients()
-    }, [isAuthenticated])
-
+    // HANDLERS
     const handlePinSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (pin === CORRECT_PIN) {
             setIsAuthenticated(true)
-            setError('')
+            fetchPatients() // Giriş yapınca verileri çek
         } else {
-            setError('Hatalı şifre!')
+            setMessageData({ type: 'error', message: 'Hatalı şifre!' })
             setPin('')
         }
     }
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault()
-        try {
-            await api.post('/patients/', formData)
-            alert('Hasta başarıyla eklendi!') // Basit bildirim
+    const handleSave = async (formData: any) => {
+        const result = await addPatient(formData)
+        if (result.success) {
+            setMessageData({ type: 'success', message: 'Hasta başarıyla eklendi!' })
             setShowModal(false)
-            setFormData({ first_name: '', last_name: '', phone_number: '', address: '', email: '' })
-            fetchPatients()
-        } catch (err) {
-            console.error(err)
-            alert('Kayıt sırasında bir hata oluştu.')
+        } else {
+            setMessageData({ type: 'error', message: result.error || 'Kayıt sırasında hata oluştu.' })
         }
     }
 
@@ -75,23 +55,25 @@ const Patients = () => {
                     <p className="text-gray-600 mb-6 text-sm">Hasta verilerini görüntülemek için lütfen erişim kodunu giriniz.</p>
 
                     <form onSubmit={handlePinSubmit}>
-                        <input
-                            type="password"
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded mb-4 text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="****"
-                            maxLength={4}
-                            autoFocus
-                        />
-                        <button
+                        <div className="mb-4">
+                            <Input
+                                type="password"
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value)}
+                                className="text-center text-lg tracking-widest"
+                                placeholder="****"
+                                maxLength={4}
+                                autoFocus
+                            />
+                        </div>
+                        <Button
                             type="submit"
-                            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200"
+                            className="w-full bg-blue-600 hover:bg-blue-700"
                         >
                             Giriş Yap
-                        </button>
+                        </Button>
                     </form>
-                    {error && <p className="text-red-500 mt-3 text-sm font-bold">{error}</p>}
+                    {messageData && <p className="text-red-500 mt-3 text-sm font-bold">{messageData.message}</p>}
                 </div>
             </div>
         )
@@ -99,30 +81,35 @@ const Patients = () => {
 
     return (
         <div className="container mx-auto p-4">
+            {messageData && (
+                <Alert
+                    type={messageData.type}
+                    title={messageData.title}
+                    message={messageData.message}
+                    onClose={() => setMessageData(null)}
+                />
+            )}
+
+            {patientError && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">{patientError}</div>}
+
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-green-600">Hasta Listesi</h1>
-                <div>
-                    <button
+                <div className="flex gap-2 items-center">
+                    <Button
                         onClick={() => setShowModal(true)}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-4"
+                        className="bg-green-600 hover:bg-green-700"
                     >
                         + Yeni Hasta
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={() => setIsAuthenticated(false)}
-                        className="text-sm text-gray-500 hover:text-red-500 underline"
+                        className="text-gray-500 hover:text-red-500 underline"
                     >
                         Güvenli Çıkış
-                    </button>
+                    </Button>
                 </div>
             </div>
-
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <strong className="font-bold">Hata: </strong>
-                    <span className="block sm:inline">{error}</span>
-                </div>
-            )}
 
             <div className="overflow-x-auto shadow-md sm:rounded-lg">
                 <table className="w-full text-sm text-left text-gray-500">
@@ -137,7 +124,7 @@ const Patients = () => {
                     </thead>
                     <tbody>
                         {patients.length > 0 ? (
-                            patients.map((patient: any) => (
+                            patients.map((patient: Patient) => (
                                 <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
                                     <td className="px-6 py-4 font-medium text-gray-900">
                                         #{patient.id}
@@ -159,7 +146,7 @@ const Patients = () => {
                         ) : (
                             <tr>
                                 <td colSpan={5} className="px-6 py-4 text-center">
-                                    {error ? 'Veri yüklenemedi.' : 'Kayıtlı hasta bulunamadı.'}
+                                    {patientError ? 'Veri yüklenemedi.' : 'Kayıtlı hasta bulunamadı.'}
                                 </td>
                             </tr>
                         )}
@@ -172,32 +159,10 @@ const Patients = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg w-96 shadow-xl">
                         <h2 className="text-xl font-bold mb-4">Yeni Hasta Ekle</h2>
-                        <form onSubmit={handleSave}>
-                            <div className="mb-3">
-                                <label className="block text-sm font-bold mb-1">Ad</label>
-                                <input required className="border p-2 w-full rounded" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
-                            </div>
-                            <div className="mb-3">
-                                <label className="block text-sm font-bold mb-1">Soyad</label>
-                                <input required className="border p-2 w-full rounded" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
-                            </div>
-                            <div className="mb-3">
-                                <label className="block text-sm font-bold mb-1">Telefon</label>
-                                <input required className="border p-2 w-full rounded" value={formData.phone_number} onChange={e => setFormData({ ...formData, phone_number: e.target.value })} />
-                            </div>
-                            <div className="mb-3">
-                                <label className="block text-sm font-bold mb-1">Email</label>
-                                <input type="email" className="border p-2 w-full rounded" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                            </div>
-                            <div className="mb-3">
-                                <label className="block text-sm font-bold mb-1">Adres</label>
-                                <textarea className="border p-2 w-full rounded" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <button type="button" onClick={() => setShowModal(false)} className="bg-gray-300 px-4 py-2 rounded">İptal</button>
-                                <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Kaydet</button>
-                            </div>
-                        </form>
+                        <PatientForm
+                            onSubmit={handleSave}
+                            onCancel={() => setShowModal(false)}
+                        />
                     </div>
                 </div>
             )}

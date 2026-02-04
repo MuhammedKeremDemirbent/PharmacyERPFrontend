@@ -1,13 +1,17 @@
-// Link removed
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../../store/slices/authSlice';
+import type { RootState } from '../../store/store';
+import Button from '../atoms/Button';
 
 const Navbar = () => {
-    const handleLogout = () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.reload();
-    };
+    const dispatch = useDispatch();
+    const username = useSelector((state: RootState) => state.auth.user);
 
-    const username = localStorage.getItem('username');
+    const handleLogout = () => {
+        dispatch(logout());
+        window.location.href = "/"; // Login sayfasına at
+    };
 
     return (
         <nav className="bg-gray-800 shadow-md p-4">
@@ -22,12 +26,13 @@ const Navbar = () => {
                             👤 {username}
                         </span>
                     )}
-                    <button
+                    <Button
+                        variant="danger"
+                        size="sm"
                         onClick={handleLogout}
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
                     >
                         Çıkış Yap
-                    </button>
+                    </Button>
                 </div>
             </div>
         </nav>
