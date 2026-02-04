@@ -52,3 +52,10 @@ npm install jwt-decode async-mutex
 
 atom molekül yapısı inşa edildi
 
+shadcn için npm install -D @types/node indirdik
+npm install class-variance-authority clsx tailwind-merge lucide-react
+npx shadcn@latest add button input label table select card dialog alert textarea checkbox popover
+npm install class-variance-authority clsx tailwind-merge lucide-react tailwindcss-animate
+npx shadcn@latest add button input label table select card dialog alert textarea checkbox popover -y
+npm install -D @types/node
+npm install @radix-ui/react-slot
