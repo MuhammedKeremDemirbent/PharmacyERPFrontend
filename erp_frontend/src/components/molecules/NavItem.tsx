@@ -12,8 +12,8 @@ const NavItem: React.FC<NavItemProps> = ({ to, label, icon, isActive = false }) 
 
     // Aktiflik durumuna göre stil
     const activeStyles = isActive
-        ? "bg-gray-700 text-white"
-        : "text-gray-300 hover:bg-gray-700 hover:text-white";
+        ? "bg-white/10 text-white shadow-sm"
+        : "text-gray-400 hover:bg-white/5 hover:text-white";
 
     return (
         <Link

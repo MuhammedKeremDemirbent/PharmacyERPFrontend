@@ -5,6 +5,28 @@ import PatientForm from '../components/organisms/forms/PatientForm'
 import Alert from '../components/molecules/Alert'
 import { usePatients } from '../hooks/usePatients'
 import type { Patient } from '../types'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 
 const Patients = () => {
     // HOOKS
@@ -45,17 +67,18 @@ const Patients = () => {
     if (!isAuthenticated) {
         return (
             <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-[50vh]">
-                <div className="bg-white p-8 rounded-lg shadow-md max-w-sm w-full text-center border border-gray-200">
-                    <div className="mb-4 text-red-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </div>
-                    <h2 className="text-xl font-bold mb-4 text-gray-800">Güvenli Erişim</h2>
-                    <p className="text-gray-600 mb-6 text-sm">Hasta verilerini görüntülemek için lütfen erişim kodunu giriniz.</p>
-
-                    <form onSubmit={handlePinSubmit}>
-                        <div className="mb-4">
+                <Card className="w-full max-w-sm text-center border-none shadow-lg">
+                    <CardHeader>
+                        <div className="mb-4 text-destructive flex justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <CardTitle className="text-xl font-bold">Güvenli Erişim</CardTitle>
+                        <CardDescription>Hasta verilerini görüntülemek için lütfen erişim kodunu giriniz.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handlePinSubmit} className="space-y-4">
                             <Input
                                 type="password"
                                 value={pin}
@@ -65,22 +88,22 @@ const Patients = () => {
                                 maxLength={4}
                                 autoFocus
                             />
-                        </div>
-                        <Button
-                            type="submit"
-                            className="w-full bg-blue-600 hover:bg-blue-700"
-                        >
-                            Giriş Yap
-                        </Button>
-                    </form>
-                    {messageData && <p className="text-red-500 mt-3 text-sm font-bold">{messageData.message}</p>}
-                </div>
+                            <Button
+                                type="submit"
+                                className="w-full"
+                            >
+                                Giriş Yap
+                            </Button>
+                        </form>
+                        {messageData && <p className="text-destructive mt-3 text-sm font-bold">{messageData.message}</p>}
+                    </CardContent>
+                </Card>
             </div>
         )
     }
 
     return (
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 space-y-6">
             {messageData && (
                 <Alert
                     type={messageData.type}
@@ -90,82 +113,70 @@ const Patients = () => {
                 />
             )}
 
-            {patientError && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">{patientError}</div>}
+            {patientError && <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-4">{patientError}</div>}
 
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-green-600">Hasta Listesi</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold tracking-tight text-primary">Hasta Listesi</h1>
                 <div className="flex gap-2 items-center">
-                    <Button
-                        onClick={() => setShowModal(true)}
-                        className="bg-green-600 hover:bg-green-700"
-                    >
-                        + Yeni Hasta
-                    </Button>
+                    <Dialog open={showModal} onOpenChange={setShowModal}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                + Yeni Hasta
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Yeni Hasta Ekle</DialogTitle>
+                            </DialogHeader>
+                            <PatientForm
+                                onSubmit={handleSave}
+                                onCancel={() => setShowModal(false)}
+                            />
+                        </DialogContent>
+                    </Dialog>
+
                     <Button
                         variant="ghost"
                         onClick={() => setIsAuthenticated(false)}
-                        className="text-gray-500 hover:text-red-500 underline"
+                        className="text-muted-foreground hover:text-destructive"
                     >
                         Güvenli Çıkış
                     </Button>
                 </div>
             </div>
 
-            <div className="overflow-x-auto shadow-md sm:rounded-lg">
-                <table className="w-full text-sm text-left text-gray-500">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                            <th scope="col" className="px-6 py-3">Hasta ID</th>
-                            <th scope="col" className="px-6 py-3">Adı Soyadı</th>
-                            <th scope="col" className="px-6 py-3">Telefon</th>
-                            <th scope="col" className="px-6 py-3">Email</th>
-                            <th scope="col" className="px-6 py-3">Adres</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <div className="rounded-md border bg-card text-card-foreground shadow">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Hasta ID</TableHead>
+                            <TableHead>Adı Soyadı</TableHead>
+                            <TableHead>Telefon</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Adres</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {patients.length > 0 ? (
                             patients.map((patient: Patient) => (
-                                <tr key={patient.id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-medium text-gray-900">
-                                        #{patient.id}
-                                    </td>
-                                    <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                        {patient.first_name} {patient.last_name}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {patient.phone_number}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {patient.email || '-'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {patient.address}
-                                    </td>
-                                </tr>
+                                <TableRow key={patient.id}>
+                                    <TableCell className="font-medium">#{patient.id}</TableCell>
+                                    <TableCell className="font-medium">{patient.first_name} {patient.last_name}</TableCell>
+                                    <TableCell>{patient.phone_number}</TableCell>
+                                    <TableCell>{patient.email || '-'}</TableCell>
+                                    <TableCell>{patient.address}</TableCell>
+                                </TableRow>
                             ))
                         ) : (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-4 text-center">
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center">
                                     {patientError ? 'Veri yüklenemedi.' : 'Kayıtlı hasta bulunamadı.'}
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         )}
-                    </tbody>
-                </table>
+                    </TableBody>
+                </Table>
             </div>
-
-            {/* MODAL */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-96 shadow-xl">
-                        <h2 className="text-xl font-bold mb-4">Yeni Hasta Ekle</h2>
-                        <PatientForm
-                            onSubmit={handleSave}
-                            onCancel={() => setShowModal(false)}
-                        />
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

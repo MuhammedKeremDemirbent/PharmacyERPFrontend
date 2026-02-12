@@ -8,8 +8,8 @@ const Sidebar = () => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="flex flex-col w-64 h-screen px-4 py-8 bg-gray-800 border-r dark:bg-gray-800 dark:border-gray-600">
-            <h2 className="text-3xl font-semibold text-center text-white mb-6">Menu</h2>
+        <div className="flex flex-col w-64 h-screen px-4 py-8 bg-slate-900 border-r border-slate-800 shadow-xl">
+            <h2 className="text-3xl font-semibold text-center text-white mb-6 tracking-tight">Menu</h2>
 
             <div className="flex flex-col justify-between flex-1 mt-6">
                 <nav>

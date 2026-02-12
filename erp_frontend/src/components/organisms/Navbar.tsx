@@ -14,22 +14,23 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="bg-gray-800 shadow-md p-4">
+        <nav className="bg-slate-900 text-white shadow-md p-4">
             <div className="container mx-auto flex justify-between items-center">
-                <div className="text-xl font-bold text-white flex items-center">
+                <div className="text-xl font-bold flex items-center">
                     Demirbent Eczanesi
                 </div>
 
                 <div className="flex items-center space-x-4">
                     {username && (
-                        <span className="text-gray-300 font-medium border-r border-gray-600 pr-4">
+                        <span className="font-medium border-r border-primary-foreground/30 pr-4 opacity-90">
                             👤 {username}
                         </span>
                     )}
                     <Button
-                        variant="danger"
+                        variant="destructive"
                         size="sm"
                         onClick={handleLogout}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                         Çıkış Yap
                     </Button>

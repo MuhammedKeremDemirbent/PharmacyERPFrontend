@@ -6,12 +6,14 @@ interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
     error?: string;
 }
 
+import { Label } from "@/components/ui/label";
+
 const FormField: React.FC<FormFieldProps> = ({ label, id, error, className, ...props }) => {
     return (
         <div className={`mb-4 ${className}`}>
-            <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+            <Label htmlFor={id} className="mb-2 block">
                 {label}
-            </label>
+            </Label>
             <Input id={id} error={error} {...props} />
         </div>
     );

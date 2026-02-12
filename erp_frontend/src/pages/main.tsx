@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { v4 as uuidv4 } from 'uuid';
 import api from '../api'
 import Alert from '../components/molecules/Alert'
 import Button from '../components/atoms/Button'
 import Input from '../components/atoms/Input'
+import { Card } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '../store/store'
 import { addToCart, removeFromCart, decreaseQuantity, clearCart } from '../store/slices/cartSlice'
@@ -80,8 +83,15 @@ const MainPOS = () => {
                 patient_id: selectedPatient
             };
 
+            // Idempotency Key
+            const idempotencyKey = uuidv4();
+
             // API'ye POST isteği at
-            const response = await api.post('/sales/checkout/', payload);
+            const response = await api.post('/sales/checkout/', payload, {
+                headers: {
+                    'Idempotency-Key': idempotencyKey
+                }
+            });
 
             // Başarılı olursa
             console.log("Satış başarılı:", response.data);
@@ -131,7 +141,7 @@ const MainPOS = () => {
     if (loading) return <div className="p-10 text-center">Sistem Yükleniyor...</div>
 
     return (
-        <div className="flex h-full overflow-hidden bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex h-full gap-4 p-4 bg-muted/40">
             {messageData && (
                 <Alert
                     type={messageData.type}
@@ -140,138 +150,150 @@ const MainPOS = () => {
                     onClose={() => setMessageData(null)}
                 />
             )}
+
             {/* SOL TARAF: ÜRÜN LİSTESİ */}
-            <div className="w-2/3 p-4 flex flex-col overflow-hidden">
-                <div className="mb-4">
+            <Card className="w-2/3 flex flex-col overflow-hidden border-none shadow-md">
+                <div className="p-4 border-b bg-card">
                     <Input
                         type="text"
                         placeholder="Barkod okutun veya ilaç adı arayın..."
-                        className="text-lg p-4 h-auto"
+                        className="text-lg p-6 h-auto"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         autoFocus
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto pb-20 space-y-3">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
                     {filteredProducts.map((product: any) => (
-                        <div
+                        <Card
                             key={product.id}
                             onClick={() => handleAddToBasket(product)}
-                            className={`cursor-pointer bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all border-l-4 flex justify-between items-center ${product.how_many > 0 ? 'border-green-500' : 'border-red-500 hover:bg-red-50'}`}
+                            className={`cursor-pointer p-0 transition-all hover:shadow-lg border-l-4 ${product.how_many > 0
+                                ? 'border-l-green-500 hover:bg-green-50/20'
+                                : 'border-l-destructive hover:bg-destructive/10'
+                                }`}
                         >
-                            <div className="flex-1">
-                                <h3 className="font-bold text-gray-800 text-lg">{product.name}</h3>
-                                <span className="text-sm text-gray-500">{product.form_type}</span>
-                            </div>
+                            <div className="flex justify-between items-center p-4">
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-foreground text-lg">{product.name}</h3>
+                                    <span className="text-sm text-muted-foreground">{product.form_type}</span>
+                                </div>
 
-                            <div className="text-right px-4">
-                                <span className={product.how_many < 10 ? 'text-red-600 font-bold block' : 'text-green-600 font-bold block'}>
-                                    {product.how_many} Adet
-                                </span>
-                            </div>
+                                <div className="text-right px-6">
+                                    <span className={product.how_many < 10 ? 'text-destructive font-bold block' : 'text-green-600 font-bold block'}>
+                                        {product.how_many} Adet
+                                    </span>
+                                </div>
 
-                            <div className="text-right">
-                                <span className="text-xl font-bold text-blue-600">₺{product.price}</span>
+                                <div className="text-right min-w-[100px]">
+                                    <span className="text-xl font-bold text-primary">₺{product.price}</span>
+                                </div>
                             </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
-            </div>
+            </Card>
 
             {/* SAĞ TARAF: SEPET / KASA */}
-            <div className="w-1/3 bg-white shadow-2xl flex flex-col h-full border-l border-gray-200">
-                <div className="p-4 bg-gray-800 text-white shadow-md">
-                    <h2 className="text-2xl font-bold flex items-center">
+            <Card className="w-1/3 flex flex-col h-full shadow-xl border-none overflow-hidden">
+                <div className="p-4 bg-primary text-primary-foreground shadow-md">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
                         🛒 Satış Sepeti
                     </h2>
                 </div>
 
                 {/* CRM: MÜŞTERİ SEÇİMİ */}
-                <div className="p-3 bg-blue-50 border-b border-blue-100">
-                    <label className="block text-xs font-bold text-blue-800 mb-1">Müşteri Seç</label>
-                    <select
-                        className="w-full p-2 border border-blue-300 rounded text-sm focus:outline-none focus:border-blue-500"
-                        value={selectedPatient || ''}
-                        onChange={e => setSelectedPatient(e.target.value ? Number(e.target.value) : null)}
+                <div className="p-4 bg-muted/30 border-b">
+                    <label className="block text-xs font-bold text-muted-foreground mb-2">Müşteri Seç</label>
+                    <Select
+                        value={selectedPatient?.toString()}
+                        onValueChange={(value) => setSelectedPatient(value ? Number(value) : null)}
                     >
-                        <option value="">-- Müşteri Seçilmedi --</option>
-                        {patients.map((p: any) => (
-                            <option key={p.id} value={p.id}>
-                                {p.first_name} {p.last_name} ({p.phone_number})
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="w-full bg-background">
+                            <SelectValue placeholder="-- Müşteri Seçilmedi --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="0">-- Müşteri Seçilmedi --</SelectItem> {/* null value hack */}
+                            {patients.map((p: any) => (
+                                <SelectItem key={p.id} value={p.id.toString()}>
+                                    {p.first_name} {p.last_name} ({p.phone_number})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 bg-card">
                     {basket.length === 0 ? (
-                        <div className="text-center text-gray-400 mt-20">
-                            <p className="text-6xl mb-4">🏷️</p>
-                            <p>Sepetiniz boş.</p>
+                        <div className="text-center text-muted-foreground mt-20 flex flex-col items-center">
+                            <p className="text-6xl mb-4 opacity-50">🏷️</p>
+                            <p className="font-medium">Sepetiniz boş.</p>
                             <p className="text-sm">Ürün eklemek için sol taraftan seçim yapın.</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
                             {basket.map((item, index) => (
-                                <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex justify-between items-center animate-pulse-once">
-                                    <div className="flex-1">
-                                        <div className="font-bold text-gray-800">{item.product.name}</div>
-                                        <div className="text-xs text-gray-500">Birim: ₺{item.product.price}</div>
+                                <Card key={index} className="p-3 flex justify-between items-center bg-muted/10 hover:bg-muted/30 transition-colors">
+                                    <div className="flex-1 min-w-0 mr-2">
+                                        <div className="font-bold text-sm truncate" title={item.product.name}>{item.product.name}</div>
+                                        <div className="text-xs text-muted-foreground">Birim: ₺{item.product.price}</div>
                                     </div>
 
-                                    <div className="flex items-center space-x-3">
-                                        <div className="flex items-center bg-white rounded-lg border border-gray-300">
+                                    <div className="flex items-center gap-1">
+                                        <div className="flex items-center rounded-md border bg-background shadow-sm h-8">
                                             <Button
                                                 size="sm"
-                                                variant="secondary"
+                                                variant="ghost"
                                                 onClick={() => handleDecreaseQuantity(item.product.id)}
-                                                className="rounded-r-none"
+                                                className="h-full px-2 rounded-r-none hover:bg-muted"
                                             >-</Button>
-                                            <span className="px-2 font-bold text-gray-800">{item.count}</span>
+                                            <span className="w-8 text-center font-bold text-sm">{item.count}</span>
                                             <Button
                                                 size="sm"
-                                                variant="success"
+                                                variant="ghost"
                                                 onClick={() => handleAddToBasket(item.product)}
-                                                className="rounded-l-none"
+                                                className="h-full px-2 rounded-l-none hover:bg-muted"
                                             >+</Button>
                                         </div>
-                                        <div className="font-bold text-gray-800 w-16 text-right">
+
+                                        <div className="font-bold text-sm w-16 text-right tabular-nums">
                                             ₺{(item.count * Number(item.product.price)).toFixed(2)}
                                         </div>
+
                                         <Button
                                             size="sm"
                                             variant="ghost"
                                             onClick={() => handleRemoveFromBasket(item.product.id)}
-                                            className="text-red-500 hover:text-red-700 p-1"
+                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
                                         >✕</Button>
                                     </div>
-                                </div>
+                                </Card>
                             ))}
                         </div>
                     )}
                 </div>
 
                 {/* ALT KISIM: TOPLAM VE İŞLEM */}
-                <div className="p-6 bg-gray-50 border-t border-gray-200">
+                <div className="p-6 bg-muted/30 border-t">
                     <div className="flex justify-between items-center mb-6">
-                        <span className="text-gray-600 text-lg">Toplam Tutar</span>
-                        <span className="text-4xl font-bold text-blue-700">₺{totalAmount.toFixed(2)}</span>
+                        <span className="text-muted-foreground text-lg font-medium">Toplam Tutar</span>
+                        <span className="text-4xl font-bold text-primary tabular-nums">₺{totalAmount.toFixed(2)}</span>
                     </div>
 
                     <Button
                         onClick={handleCheckout}
                         disabled={basket.length === 0 || processing}
                         size="lg"
-                        className={`w-full py-4 rounded-xl text-white font-bold text-xl shadow-lg transform transition-transform active:scale-95 ${basket.length === 0
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700'
+                        className={`w-full py-6 text-lg font-bold shadow-lg transition-transform active:scale-95 ${basket.length === 0
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
                             }`}
                     >
                         {processing ? 'İşleniyor...' : 'SATIŞI TAMAMLA'}
                     </Button>
                 </div>
-            </div>
+            </Card>
         </div>
     )
 }

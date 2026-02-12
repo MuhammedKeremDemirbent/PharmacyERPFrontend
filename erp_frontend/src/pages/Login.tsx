@@ -1,8 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api";
 import Alert from "../components/molecules/Alert";
 import Button from "../components/atoms/Button";
 import FormField from "../components/molecules/FormField";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../store/slices/authSlice";
@@ -44,55 +52,63 @@ const Login = () => {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100">
-            <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-2xl">
-                <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
-                    Eczane Yönetim Sistemi
-                </h2>
-                <p className="text-gray-500 text-center mb-8">
-                    Lütfen hesabınıza giriş yapın.
-                </p>
+        <div className="flex min-h-screen items-center justify-center bg-muted/40">
+            <Card className="w-full max-w-md shadow-2xl border-none">
+                <CardHeader className="space-y-1 text-center">
+                    <CardTitle className="text-3xl font-bold text-primary">
+                        Eczane Yönetim Sistemi
+                    </CardTitle>
+                    <CardDescription>
+                        Lütfen hesabınıza giriş yapın.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {messageData && (
+                        <Alert
+                            type={messageData.type}
+                            title={messageData.title}
+                            message={messageData.message}
+                            onClose={() => setMessageData(null)}
+                        />
+                    )}
 
-                {messageData && (
-                    <Alert
-                        type={messageData.type}
-                        title={messageData.title}
-                        message={messageData.message}
-                        onClose={() => setMessageData(null)}
-                    />
-                )}
+                    <form onSubmit={handleLogin} className="space-y-4 pt-4">
+                        <FormField
+                            id="username"
+                            label="Kullanıcı Adı"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="admin"
+                            required
+                        />
 
-                <form onSubmit={handleLogin}>
-                    <FormField
-                        id="username"
-                        label="Kullanıcı Adı"
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="admin"
-                        required
-                    />
+                        <FormField
+                            id="password"
+                            label="Şifre"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="******"
+                            required
+                        />
 
-                    <FormField
-                        id="password"
-                        label="Şifre"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="******"
-                        required
-                        className="mb-8"
-                    />
+                        <div className="text-right">
+                            <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+                                Şifremi Unuttum?
+                            </Link>
+                        </div>
 
-                    <Button
-                        type="submit"
-                        isLoading={loading}
-                        className="w-full bg-purple-600 hover:bg-purple-700"
-                    >
-                        Giriş Yap
-                    </Button>
-                </form>
-            </div>
+                        <Button
+                            type="submit"
+                            isLoading={loading}
+                            className="w-full"
+                        >
+                            Giriş Yap
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
         </div>
     );
 };

@@ -55,14 +55,13 @@ api.interceptors.request.use(
                         token = newAccessToken;
                     } else {
                         // Refresh token yoksa çıkış yap
-                        store.dispatch(logout());
-                        window.location.href = "/";
-                        throw new axios.Cancel("Session expired"); // İsteği iptal et
+                        const error = new axios.Cancel("Session expired");
+                        // Logout işlemi catch bloğunda veya finally'de yapılabilir ama burada temiz kalsın
+                        throw error;
                     }
                 } catch (error) {
-                    // Yenileme başarısızsa çıkış yap
                     store.dispatch(logout());
-                    window.location.href = "/";
+                    window.location.href = "/login";
                     throw error;
                 } finally {
                     release();
@@ -116,14 +115,12 @@ api.interceptors.response.use(
                     return api(originalRequest);
                 } catch (refreshError) {
                     console.error("Token yenileme başarısız:", refreshError);
-                    // Refresh token de geçersizse çıkış yap
-                    store.dispatch(logout()); // Redux'tan sil
-                    window.location.href = "/";
+                    store.dispatch(logout());
+                    window.location.href = "/login";
                 }
             } else {
-                // Refresh token yoksa çıkış yap
                 store.dispatch(logout());
-                window.location.href = "/";
+                window.location.href = "/login";
             }
         }
         return Promise.reject(error);

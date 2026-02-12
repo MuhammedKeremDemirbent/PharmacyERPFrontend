@@ -5,6 +5,22 @@ import MedicineForm from '../components/organisms/forms/MedicineForm'
 import { useMedicines } from '../hooks/useMedicines'
 import { useSuppliers } from '../hooks/useSuppliers'
 import type { Medicine } from '../types'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 
 const Inventory = () => {
     // HOOKS
@@ -57,7 +73,7 @@ const Inventory = () => {
     }
 
     return (
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 space-y-6">
             {messageData && (
                 <Alert
                     type={messageData.type}
@@ -67,81 +83,67 @@ const Inventory = () => {
                 />
             )}
 
-            {medError && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">{medError}</div>}
+            {medError && <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-4" role="alert">{medError}</div>}
 
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Eczane Stok Listesi</h1>
-                <Button onClick={openNew}>
-                    + İlaç Ekle
-                </Button>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold tracking-tight">Eczane Stok Listesi</h1>
+                <Dialog open={showModal} onOpenChange={setShowModal}>
+                    <DialogTrigger asChild>
+                        <Button onClick={openNew}>
+                            + İlaç Ekle
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>{editingMed ? 'İlaç Düzenle' : 'Yeni İlaç Ekle'}</DialogTitle>
+                        </DialogHeader>
+                        <MedicineForm
+                            initialData={editingMed}
+                            suppliers={suppliers}
+                            onSubmit={handleSave}
+                            onCancel={() => setShowModal(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full leading-normal">
-                    <thead>
-                        <tr>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">İlaç Adı</th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Form</th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SKT</th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stok</th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fiyat</th>
-                            <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <div className="rounded-md border bg-card text-card-foreground shadow">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>İlaç Adı</TableHead>
+                            <TableHead>Form</TableHead>
+                            <TableHead>SKT</TableHead>
+                            <TableHead>Stok</TableHead>
+                            <TableHead>Fiyat</TableHead>
+                            <TableHead className="text-right">İşlemler</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {medicines.map((med) => (
-                            <tr key={med.id} className="hover:bg-gray-50 transition duration-150">
-                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <div className="flex items-center">
-                                        <div className="ml-3">
-                                            <p className="text-gray-900 whitespace-no-wrap font-semibold">{med.name}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <p className="text-gray-900 whitespace-no-wrap">{med.form_type}</p>
-                                </td>
-                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <p className="text-gray-900 whitespace-no-wrap">{med.expiry_date}</p>
-                                </td>
-                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <span className={`relative inline-block px-3 py-1 font-semibold leading-tight ${med.how_many < 10 ? 'text-red-900' : 'text-green-900'}`}>
-                                        <span aria-hidden className={`absolute inset-0 ${med.how_many < 10 ? 'bg-red-200' : 'bg-green-200'} opacity-50 rounded-full`}></span>
-                                        <span className="relative">{med.how_many}</span>
-                                    </span>
-                                </td>
-                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <p className="text-gray-900 whitespace-no-wrap">₺{med.price}</p>
-                                </td>
-                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                    <div className="flex gap-2">
-                                        <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-900" onClick={() => openEdit(med)}>Düzenle</Button>
-                                        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-900" onClick={() => handleDelete(med.id)}>Sil</Button>
-                                    </div>
-                                </td>
-                            </tr>
+                            <TableRow key={med.id}>
+                                <TableCell className="font-medium">{med.name}</TableCell>
+                                <TableCell>{med.form_type}</TableCell>
+                                <TableCell>{med.expiry_date}</TableCell>
+                                <TableCell>
+                                    <Badge variant={med.how_many < 10 ? "destructive" : "secondary"} className={med.how_many >= 10 ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}>
+                                        {med.how_many}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>₺{med.price}</TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => { setEditingMed(med); setShowModal(true); }}>
+                                        Düzenle
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(med.id)}>
+                                        Sil
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
+                    </TableBody>
+                </Table>
             </div>
-
-            {showModal && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40 flex items-center justify-center">
-                    <div className="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                        <div className="mt-3">
-                            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                                {editingMed ? 'İlaç Düzenle' : 'Yeni İlaç Ekle'}
-                            </h3>
-                            <MedicineForm
-                                initialData={editingMed}
-                                suppliers={suppliers}
-                                onSubmit={handleSave}
-                                onCancel={() => setShowModal(false)}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

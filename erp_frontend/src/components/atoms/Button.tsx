@@ -1,8 +1,13 @@
 import React from 'react';
+import { Button as ShadcnButton, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 
+// Shadcn Button varyantlarıyla bizim varyantları eşleştirmek için
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'ghost';
-    size?: 'sm' | 'md' | 'lg';
+    variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'ghost' | 'destructive' | 'outline' | 'default' | 'link';
+    size?: 'sm' | 'md' | 'lg' | 'default' | 'icon';
     isLoading?: boolean;
 }
 
@@ -11,45 +16,67 @@ const Button: React.FC<ButtonProps> = ({
     variant = 'primary',
     size = 'md',
     isLoading = false,
-    className = '',
+    className,
     disabled,
     ...props
 }) => {
+    // Bizim varyantları Shadcn varyantlarına dönüştürme
+    let shadcnVariant: VariantProps<typeof buttonVariants>['variant'] = 'default';
+    let customClass = '';
 
-    // Temel stiller
-    const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+    switch (variant) {
+        case 'primary':
+        case 'default':
+            shadcnVariant = 'default'; // Mavi
+            break;
+        case 'secondary':
+            shadcnVariant = 'secondary'; // Gri
+            break;
+        case 'danger':
+        case 'destructive':
+            shadcnVariant = 'destructive'; // Kırmızı
+            break;
+        case 'ghost':
+            shadcnVariant = 'ghost'; // Şeffaf
+            break;
+        case 'outline':
+            shadcnVariant = 'outline';
+            break;
+        case 'link':
+            shadcnVariant = 'link';
+            break;
+        case 'success':
+            shadcnVariant = 'default'; // Yeşil (Özel class ile)
+            customClass = 'bg-green-600 hover:bg-green-700 text-white';
+            break;
+        case 'warning':
+            shadcnVariant = 'default'; // Sarı (Özel class ile)
+            customClass = 'bg-yellow-500 hover:bg-yellow-600 text-white';
+            break;
+        default:
+            shadcnVariant = 'default';
+    }
 
-    // Boyut stilleri
-    const sizeStyles = {
-        sm: "px-3 py-1.5 text-sm",
-        md: "px-4 py-2 text-base",
-        lg: "px-6 py-3 text-lg"
-    };
-
-    // Renk stilleri
-    const variantStyles = {
-        primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
-        secondary: "bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500",
-        danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
-        success: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500",
-        warning: "bg-yellow-500 hover:bg-yellow-600 text-white focus:ring-yellow-400",
-        ghost: "bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-gray-300"
-    };
+    // Boyut dönüşümü
+    let shadcnSize: VariantProps<typeof buttonVariants>['size'] = 'default';
+    switch (size) {
+        case 'sm': shadcnSize = 'sm'; break;
+        case 'lg': shadcnSize = 'lg'; break;
+        case 'icon': shadcnSize = 'icon'; break;
+        default: shadcnSize = 'default';
+    }
 
     return (
-        <button
-            className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+        <ShadcnButton
+            variant={shadcnVariant}
+            size={shadcnSize}
+            className={cn(customClass, className)}
             disabled={isLoading || disabled}
             {...props}
         >
-            {isLoading && (
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            )}
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {children}
-        </button>
+        </ShadcnButton>
     );
 };
 
