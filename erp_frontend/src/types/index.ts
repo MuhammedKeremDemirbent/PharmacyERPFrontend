@@ -18,6 +18,7 @@ export interface Supplier {
 
 export interface Medicine {
     id: number;
+    barcode?: string;
     name: string;
     form_type: 'TABLET' | 'LIQUID' | 'OTHER' | string;
     expiry_date: string;
@@ -28,6 +29,7 @@ export interface Medicine {
 
 export interface Patient {
     id: number;
+    tc?: string;
     first_name: string;
     last_name: string;
     phone_number: string;
@@ -39,3 +41,6 @@ export interface CartItem {
     product: Medicine;
     count: number;
 }
+
+//Kalıcı nesnelerdir.
+//servies.ts ile farkı services.ts geçici nesnelerdir.

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid';
-import api from '../api'
 import Alert from '../components/molecules/Alert'
 import Button from '../components/atoms/Button'
 import Input from '../components/atoms/Input'
@@ -9,52 +8,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '../store/store'
 import { addToCart, removeFromCart, decreaseQuantity, clearCart } from '../store/slices/cartSlice'
-import { setMedicines } from '../store/slices/medicineSlice'
+import { useGetMedicinesQuery } from '../store/api/medicineApi'
+import { useGetPatientsQuery } from '../store/api/patientApi'
+import { useCheckoutMutation } from '../store/api/salesApi'
 
 // POS Sistemi için Satış Ekranı
 const MainPOS = () => {
     // State Tanımları
     const [searchTerm, setSearchTerm] = useState('') // Arama
-    const [loading, setLoading] = useState(true)
-    const [processing, setProcessing] = useState(false) // Satış işlemi sırası
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
-    const [patients, setPatients] = useState([])
     const [selectedPatient, setSelectedPatient] = useState<number | null>(null)
 
-    // REDUX BAĞLANTISI
+    // REDUX & RTK QUERY BAĞLANTISI
     const dispatch = useDispatch();
     const basket = useSelector((state: RootState) => state.cart.items);
-    const products = useSelector((state: RootState) => state.medicine.list);
 
-    useEffect(() => {
-        // Redux Cache Check
-        if (products.length === 0) {
-            fetchProducts()
-        } else {
-            setLoading(false)
-        }
-        fetchPatients()
-    }, [])
+    const { data: products = [], isLoading: isProductsLoading } = useGetMedicinesQuery();
+    const { data: patients = [], isLoading: isPatientsLoading } = useGetPatientsQuery();
+    const [checkout, { isLoading: isProcessing }] = useCheckoutMutation();
 
-    const fetchPatients = () => {
-        api.get('/patients/')
-            .then(res => setPatients(res.data))
-            .catch(err => console.error("Hasta listesi çekilemedi:", err))
-    }
-
-    const fetchProducts = () => {
-        setLoading(true)
-        api.get('/inventory/medicines/')
-            .then(response => {
-                dispatch(setMedicines(response.data)) // Redux'a kaydet
-                setLoading(false)
-            })
-            .catch(error => {
-                console.error('Veri çekme hatası:', error)
-                setLoading(false)
-            })
-    }
+    const loading = isProductsLoading || isPatientsLoading;
 
     const handleAddToBasket = (product: any) => {
         dispatch(addToCart(product));
@@ -72,64 +46,54 @@ const MainPOS = () => {
     const handleCheckout = async () => {
         if (basket.length === 0) return;
 
-        setProcessing(true);
-
         try {
             const payload = {
                 items: basket.map(item => ({
                     product_id: item.product.id,
                     quantity: item.count
                 })),
-                patient_id: selectedPatient
+                patient_id: selectedPatient === 0 ? null : selectedPatient
             };
 
             // Idempotency Key
             const idempotencyKey = uuidv4();
 
-            // API'ye POST isteği at
-            const response = await api.post('/sales/checkout/', payload, {
-                headers: {
-                    'Idempotency-Key': idempotencyKey
-                }
-            });
+            // API'ye RTK Query ile isteği at
+            const response = await checkout({ data: payload, idempotencyKey }).unwrap();
 
             // Başarılı olursa
-            console.log("Satış başarılı:", response.data);
-            setMessageData({ type: 'success', title: 'Satış Başarılı!', message: `Satış ID: #${response.data.sale_id}\nToplam Tutar: ₺${response.data.total}` });
+            console.log("Satış başarılı:", response);
+            setMessageData({ type: 'success', title: 'Satış Başarılı!', message: `Satış ID: #${response.sale_id}\nToplam Tutar: ₺${response.total}` });
 
-            dispatch(clearCart()); // Sepeti temizle (Redux)
+            dispatch(clearCart()); // Sepeti temizle 
             setSelectedPatient(null);
-            fetchProducts();
 
-        } catch (error: any) {
-            console.error("Satış hatası:", error);
+
+        } catch (err: any) {
+            console.error("Satış hatası:", err);
 
             let errorMessage = "Satış işlemi sırasında bir hata oluştu.";
 
-            if (error.response) {
-                const data = error.response.data;
-                const contentType = error.response.headers?.['content-type'];
-
-                if (contentType && contentType.includes('text/html')) {
-                    errorMessage = "Sunucu tarafında kritik bir hata oluştu (500).";
-                } else if (typeof data === 'string') {
+            if (err.data) {
+                const data = err.data;
+                if (typeof data === 'string') {
                     errorMessage = data;
-                } else if (data?.detail) {
+                } else if (data.detail) {
                     errorMessage = data.detail;
-                } else if (data?.error) {
+                } else if (data.error) {
                     errorMessage = data.error;
-                } else if (data?.non_field_errors) {
+                } else if (data.non_field_errors) {
                     errorMessage = data.non_field_errors[0];
                 } else {
                     errorMessage = JSON.stringify(data);
                 }
-            } else if (error.message) {
-                errorMessage = error.message;
+            } else if (err.status === 500) {
+                errorMessage = "Sunucu tarafında kritik bir hata oluştu (500).";
+            } else if (err.message) {
+                errorMessage = err.message;
             }
 
             setMessageData({ type: 'error', title: 'Hata!', message: errorMessage });
-        } finally {
-            setProcessing(false);
         }
     }
 
@@ -283,14 +247,14 @@ const MainPOS = () => {
 
                     <Button
                         onClick={handleCheckout}
-                        disabled={basket.length === 0 || processing}
+                        disabled={basket.length === 0 || isProcessing}
                         size="lg"
                         className={`w-full py-6 text-lg font-bold shadow-lg transition-transform active:scale-95 ${basket.length === 0
                             ? 'opacity-50 cursor-not-allowed'
                             : 'bg-green-600 hover:bg-green-700 text-white'
                             }`}
                     >
-                        {processing ? 'İşleniyor...' : 'SATIŞI TAMAMLA'}
+                        {isProcessing ? 'İşleniyor...' : 'SATIŞI TAMAMLA'}
                     </Button>
                 </div>
             </Card>

@@ -109,3 +109,16 @@ SIMPLE_JWT = {
 İDEMPOTENCY İÇİN npm install uuid @types/uuid indirdik
 MAİN.TSX İÇİN İDEMPOTENCY KODUNU EKLEDİK
 import { v4 as uuidv4 } from 'uuid'; BENZERSİZ ANAHTAR OLUŞTURMA
+
+
+
+store ve services kısımları tamamen değişti rtk query ile entegre edildi
+
+
+StrictMode canlıya alınınca kapanabilirmiş
+keepUnusedDataFor: 5
+
+
+ Eğer yeni bir API ekleyeceksen, önce types/service.ts içinde tipini tanımla, sonra store/api/ içinde yeni bir dosya oluştur ve en son store/store.ts içinde onu tanıt. En son sayfada kullan!
+
+ cloudflaretunnel

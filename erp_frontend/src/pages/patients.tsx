@@ -3,7 +3,13 @@ import Button from '../components/atoms/Button'
 import Input from '../components/atoms/Input'
 import PatientForm from '../components/organisms/forms/PatientForm'
 import Alert from '../components/molecules/Alert'
-import { usePatients } from '../hooks/usePatients'
+import {
+    useLazyGetPatientsQuery,
+    useCreatePatientMutation,
+    useUploadPatientExcelMutation,
+    useUpdatePatientMutation,
+    useDeletePatientMutation
+} from '../store/api/patientApi'
 import type { Patient } from '../types'
 import {
     Card,
@@ -27,26 +33,32 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { Edit2, Trash2 } from 'lucide-react'
 
 const Patients = () => {
-    // HOOKS
-    const { patients, error: patientError, fetchPatients, addPatient } = usePatients()
+    // RTK QUERY HOOKS
+    const [triggerGetPatients, { data: patients = [], isLoading, error: patientError }] = useLazyGetPatientsQuery() //LazyQUery kısmı burada
+    const [createPatient] = useCreatePatientMutation()
+    const [uploadPatientExcel, { isLoading: isUploading }] = useUploadPatientExcelMutation()
+    const [updatePatient] = useUpdatePatientMutation()
+    const [deletePatient] = useDeletePatientMutation()
 
     // LOCAL STATE
     const [showModal, setShowModal] = useState(false)
+    const [selectedPatient, setSelectedPatient] = useState<Patient | undefined>(undefined)
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null)
 
     // SECURITY STATE
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [pin, setPin] = useState('')
-    const CORRECT_PIN = "1234"
+    const CORRECT_PIN = "1234"  // ŞİFRE
 
     // HANDLERS
     const handlePinSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (pin === CORRECT_PIN) {
             setIsAuthenticated(true)
-            fetchPatients() // Giriş yapınca verileri çek
+            triggerGetPatients()
         } else {
             setMessageData({ type: 'error', message: 'Hatalı şifre!' })
             setPin('')
@@ -54,12 +66,51 @@ const Patients = () => {
     }
 
     const handleSave = async (formData: any) => {
-        const result = await addPatient(formData)
-        if (result.success) {
-            setMessageData({ type: 'success', message: 'Hasta başarıyla eklendi!' })
+        try {
+            if (selectedPatient) {
+                await updatePatient({ id: selectedPatient.id, data: formData }).unwrap()
+                setMessageData({ type: 'success', message: 'Hasta başarıyla güncellendi!' })
+            } else {
+                await createPatient(formData).unwrap()
+                setMessageData({ type: 'success', message: 'Hasta başarıyla eklendi!' })
+            }
             setShowModal(false)
-        } else {
-            setMessageData({ type: 'error', message: result.error || 'Kayıt sırasında hata oluştu.' })
+            setSelectedPatient(undefined)
+        } catch (err: any) {
+            const msg = err.data?.detail || 'Kayıt sırasında hata oluştu.'
+            setMessageData({ type: 'error', message: msg })
+        }
+    }
+
+    const handleDelete = async (id: number) => {
+        if (window.confirm('Bu hastayı silmek istediğinize emin misiniz?')) {
+            try {
+                await deletePatient(id).unwrap()
+                setMessageData({ type: 'success', message: 'Hasta başarıyla silindi!' })
+                triggerGetPatients()
+            } catch (err: any) {
+                setMessageData({ type: 'error', message: 'Silme işlemi sırasında hata oluştu.' })
+            }
+        }
+    }
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        const formData = new FormData()
+        formData.append('file', file)
+
+        try {
+            const res = await uploadPatientExcel(formData).unwrap()
+            setMessageData({ type: 'success', message: res.message || 'Excel başarıyla yüklendi!' })
+            triggerGetPatients() // Listeyi güncelle
+        } catch (err: any) {
+            const msg = err.data?.error || 'Excel yüklenirken bir hata oluştu.'
+            setMessageData({ type: 'error', message: msg })
+        } finally {
+            // Aynı dosyayı tekrar seçebilmek için inputu sıfırla
+            if (e.target) e.target.value = ''
         }
     }
 
@@ -113,24 +164,56 @@ const Patients = () => {
                 />
             )}
 
-            {patientError && <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-4">{patientError}</div>}
+            {patientError && (
+                <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-4" role="alert">
+                    <p className="font-semibold">Hastalar yüklenirken bir hata oluştu.</p>
+                    <p className="text-sm">
+                        {typeof (patientError as any).data === 'string'
+                            ? (patientError as any).data
+                            : JSON.stringify((patientError as any).data || (patientError as any).error)}
+                    </p>
+                </div>
+            )}
 
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold tracking-tight text-primary">Hasta Listesi</h1>
                 <div className="flex gap-2 items-center">
+                    <div>
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            id="excel-upload"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                        />
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => document.getElementById('excel-upload')?.click()}
+                            disabled={isUploading}
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-none"
+                        >
+                            {isUploading ? 'İşleniyor...' : 'Excel Yükle'}
+                        </Button>
+                    </div>
+
                     <Dialog open={showModal} onOpenChange={setShowModal}>
                         <DialogTrigger asChild>
-                            <Button>
+                            <Button onClick={() => setSelectedPatient(undefined)}>
                                 + Yeni Hasta
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[425px]">
                             <DialogHeader>
-                                <DialogTitle>Yeni Hasta Ekle</DialogTitle>
+                                <DialogTitle>{selectedPatient ? 'Hastayı Düzenle' : 'Yeni Hasta Ekle'}</DialogTitle>
                             </DialogHeader>
                             <PatientForm
+                                initialData={selectedPatient}
                                 onSubmit={handleSave}
-                                onCancel={() => setShowModal(false)}
+                                onCancel={() => {
+                                    setShowModal(false)
+                                    setSelectedPatient(undefined)
+                                }}
                             />
                         </DialogContent>
                     </Dialog>
@@ -150,27 +233,59 @@ const Patients = () => {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Hasta ID</TableHead>
+                            <TableHead>TC Kimlik</TableHead>
                             <TableHead>Adı Soyadı</TableHead>
                             <TableHead>Telefon</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Adres</TableHead>
+                            <TableHead className="text-right">İşlemler</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {patients.length > 0 ? (
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center">Yükleniyor...</TableCell>
+                            </TableRow>
+                        ) : patients.length > 0 ? (
                             patients.map((patient: Patient) => (
                                 <TableRow key={patient.id}>
                                     <TableCell className="font-medium">#{patient.id}</TableCell>
+                                    <TableCell>{patient.tc || '-'}</TableCell>
                                     <TableCell className="font-medium">{patient.first_name} {patient.last_name}</TableCell>
                                     <TableCell>{patient.phone_number}</TableCell>
                                     <TableCell>{patient.email || '-'}</TableCell>
                                     <TableCell>{patient.address}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-1">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon"
+                                                className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 transition-all"
+                                                onClick={() => {
+                                                    setSelectedPatient(patient)
+                                                    setShowModal(true)
+                                                }}
+                                                title="Düzenle"
+                                            >
+                                                <Edit2 size={16} />
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon"
+                                                className="h-9 w-9 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+                                                onClick={() => handleDelete(patient.id)}
+                                                title="Sil"
+                                            >
+                                                <Trash2 size={16} />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
-                                    {patientError ? 'Veri yüklenemedi.' : 'Kayıtlı hasta bulunamadı.'}
+                                <TableCell colSpan={7} className="h-24 text-center">
+                                    Kayıtlı hasta bulunamadı.
                                 </TableCell>
                             </TableRow>
                         )}

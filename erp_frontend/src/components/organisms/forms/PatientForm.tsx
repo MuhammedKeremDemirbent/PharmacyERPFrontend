@@ -12,6 +12,7 @@ interface PatientFormProps {
 
 const PatientForm: React.FC<PatientFormProps> = ({ initialData, onSubmit, onCancel, isLoading }) => {
     const [formData, setFormData] = useState({
+        tc: '',
         first_name: '',
         last_name: '',
         phone_number: '',
@@ -22,6 +23,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ initialData, onSubmit, onCanc
     useEffect(() => {
         if (initialData) {
             setFormData({
+                tc: initialData.tc || '',
                 first_name: initialData.first_name || '',
                 last_name: initialData.last_name || '',
                 phone_number: initialData.phone_number || '',
@@ -38,6 +40,13 @@ const PatientForm: React.FC<PatientFormProps> = ({ initialData, onSubmit, onCanc
 
     return (
         <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+                <FormField
+                    label="TC Kimlik Numarası"
+                    value={formData.tc}
+                    onChange={e => setFormData({ ...formData, tc: e.target.value })}
+                />
+            </div>
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                     label="Ad"

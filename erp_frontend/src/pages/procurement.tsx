@@ -1,12 +1,16 @@
 import React, { useState } from 'react'
-import api from '../api' // Mail işlemi için api gerekli, henüz service'de yok
+import { axiosService } from '../services/httpRequest' // Mail için direkt axios servisi kullanalım, api.ts silindi
 import Alert from '../components/molecules/Alert'
 import Button from '../components/atoms/Button'
 import FormField from '../components/molecules/FormField'
 import Input from '../components/atoms/Input'
 import SupplierForm from '../components/organisms/forms/SupplierForm'
-import { useSuppliers } from '../hooks/useSuppliers'
-import { useMedicines } from '../hooks/useMedicines'
+import {
+    useGetSuppliersQuery,
+    useCreateSupplierMutation,
+    useUpdateSupplierMutation
+} from '../store/api/supplierApi'
+import { useLazyGetMedicinesQuery } from '../store/api/medicineApi'
 import type { Supplier } from '../types'
 import {
     Table,
@@ -31,11 +35,15 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Edit2, Mail } from 'lucide-react'
 
 const Procurement = () => {
-    // HOOKS
-    const { suppliers, error: supError, addSupplier, updateSupplier } = useSuppliers()
-    const { medicines } = useMedicines()
+    // RTK QUERY HOOKS
+    const { data: suppliers = [], isLoading: isSuppliersLoading, error: suppliersError } = useGetSuppliersQuery()
+    const [triggerGetMedicines, { data: medicines = [] }] = useLazyGetMedicinesQuery()
+
+    const [createSupplier, { isLoading: isAdding }] = useCreateSupplierMutation()
+    const [updateSupplier, { isLoading: isUpdating }] = useUpdateSupplierMutation()
 
     // LOCAL STATE
     const [showModal, setShowModal] = useState(false)
@@ -46,21 +54,21 @@ const Procurement = () => {
     const [emailModal, setEmailModal] = useState(false)
     const [emailData, setEmailData] = useState({ subject: '', message: '', supplierId: null as number | null })
     const [orderList, setOrderList] = useState<{ name: string, quantity: number }[]>([])
+    const [sendingMail, setSendingMail] = useState(false);
 
     // HANDLERS
     const handleSave = async (formData: any) => {
-        let result;
-        if (editingSup && editingSup.id) {
-            result = await updateSupplier(editingSup.id, formData);
-        } else {
-            result = await addSupplier(formData);
-        }
-
-        if (result.success) {
-            setMessageData({ type: 'success', message: editingSup ? 'Tedarikçi güncellendi!' : 'Tedarikçi eklendi!' })
+        try {
+            if (editingSup && editingSup.id) {
+                await updateSupplier({ id: editingSup.id, data: formData }).unwrap();
+                setMessageData({ type: 'success', message: 'Tedarikçi güncellendi!' })
+            } else {
+                await createSupplier(formData).unwrap();
+                setMessageData({ type: 'success', message: 'Tedarikçi eklendi!' })
+            }
             setShowModal(false)
-        } else {
-            setMessageData({ type: 'error', message: result.error || 'İşlem başarısız.' })
+        } catch (err: any) {
+            setMessageData({ type: 'error', message: err.data?.detail || 'İşlem başarısız.' })
         }
     }
 
@@ -78,10 +86,11 @@ const Procurement = () => {
         e.preventDefault()
         if (!emailData.supplierId) return
 
+        setSendingMail(true);
         try {
             const payload = { ...emailData, items: orderList };
-            // Bu endpoint şimdilik api üzerinden çağrılıyor, service'e taşınabilir
-            await api.post(`/procurement/${emailData.supplierId}/send-order/`, payload)
+            // Service üzerinden mail gönderimi
+            await axiosService.post(`/procurement/${emailData.supplierId}/send-order/`, payload)
             setMessageData({ type: 'success', message: 'E-posta başarıyla gönderildi!' })
             setEmailModal(false)
             setEmailData({ subject: '', message: '', supplierId: null })
@@ -90,13 +99,18 @@ const Procurement = () => {
             console.error('Mail hatası:', err)
             const msg = err.response?.data?.detail || err.message
             setMessageData({ type: 'error', message: `Mail gönderilemedi: ${msg}` })
+        } finally {
+            setSendingMail(false);
         }
     }
 
     const openEmailModal = (sup: Supplier) => {
         setEmailData({ ...emailData, supplierId: sup.id })
         setEmailModal(true)
+        triggerGetMedicines() // Burada ilaç listesini çekmeye başla
     }
+
+    const isLoading = isSuppliersLoading || isAdding || isUpdating;
 
     return (
         <div className="container mx-auto p-4 space-y-6">
@@ -109,14 +123,23 @@ const Procurement = () => {
                 />
             )}
 
-            {supError && <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-4">{supError}</div>}
+            {suppliersError && (
+                <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-4" role="alert">
+                    <p className="font-semibold">Tedarikçiler yüklenirken bir hata oluştu.</p>
+                    <p className="text-sm">
+                        {typeof (suppliersError as any).data === 'string'
+                            ? (suppliersError as any).data
+                            : JSON.stringify((suppliersError as any).data || (suppliersError as any).error)}
+                    </p>
+                </div>
+            )}
 
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold tracking-tight text-primary">Tedarikçi Yönetimi</h1>
                 <Dialog open={showModal} onOpenChange={setShowModal}>
                     <DialogTrigger asChild>
-                        <Button onClick={openNew}>
-                            + Yeni Tedarikçi Ekle
+                        <Button onClick={openNew} disabled={isLoading}>
+                            {isLoading ? 'İşleniyor...' : '+ Yeni Tedarikçi Ekle'}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
@@ -145,7 +168,11 @@ const Procurement = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {suppliers.length > 0 ? (
+                        {isSuppliersLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-24 text-center">Yükleniyor...</TableCell>
+                            </TableRow>
+                        ) : suppliers.length > 0 ? (
                             suppliers.map((supplier: Supplier) => (
                                 <TableRow key={supplier.id}>
                                     <TableCell className="font-medium">#{supplier.id}</TableCell>
@@ -153,30 +180,34 @@ const Procurement = () => {
                                     <TableCell>{supplier.email || '-'}</TableCell>
                                     <TableCell>{supplier.phone_number_proc}</TableCell>
                                     <TableCell>{supplier.address_proc}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => { setEditingSup(supplier); setShowModal(true); }}
-                                            className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
-                                        >
-                                            Düzenle
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => openEmailModal(supplier)}
-                                            className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                        >
-                                            Mail At
-                                        </Button>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 transition-all"
+                                                onClick={() => { setEditingSup(supplier); setShowModal(true); }}
+                                                title="Düzenle"
+                                            >
+                                                <Edit2 size={16} />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-xl text-blue-600 hover:bg-blue-50 transition-all"
+                                                onClick={() => openEmailModal(supplier)}
+                                                title="Mail At"
+                                            >
+                                                <Mail size={16} />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} className="h-24 text-center">
-                                    {supError ? 'Veri yüklenemedi.' : 'Kayıtlı tedarikçi bulunamadı.'}
+                                    Kayıtlı tedarikçi bulunamadı.
                                 </TableCell>
                             </TableRow>
                         )}
@@ -290,13 +321,15 @@ const Procurement = () => {
                                 type="button"
                                 variant="secondary"
                                 onClick={() => setEmailModal(false)}
+                                disabled={sendingMail}
                             >
                                 İptal
                             </Button>
                             <Button
                                 type="submit"
+                                disabled={sendingMail}
                             >
-                                Siparişi Gönder
+                                {sendingMail ? 'Gönderiliyor...' : 'Siparişi Gönder'}
                             </Button>
                         </div>
                     </form>

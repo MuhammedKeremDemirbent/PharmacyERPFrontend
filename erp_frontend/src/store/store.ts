@@ -4,35 +4,33 @@ import storage from 'redux-persist/lib/storage'; // defaults to localStorage for
 
 import cartReducer from './slices/cartSlice';
 import authReducer from './slices/authSlice';
-import supplierReducer from './slices/supplierSlice';
-import patientReducer from './slices/patientSlice';
-import medicineReducer from './slices/medicineSlice';
 
-// 1. Persist Konfigürasyonu
+import { basePublicApi, baseProtectedApi } from './baseApi';
+
+
 const persistConfig = {
     key: 'root', // Deponun genel anahtarı
     storage, // Hangi hafıza? (localStorage)
-    whitelist: ['cart', 'auth'] // Sadece Sepet ve Auth'u sakla (Medicine/Supplier/Patient API'dan gelir)
+    whitelist: ['cart', 'auth'] // Sadece Sepet ve Auth'u sakla (Diğerleri API'dan anlık gelir)
 };
 
-// 2. Reducerları Birleştir
+
 const rootReducer = combineReducers({
     cart: cartReducer,
     auth: authReducer,
-    supplier: supplierReducer,
-    patient: patientReducer,
-    medicine: medicineReducer,
+    [basePublicApi.reducerPath]: basePublicApi.reducer,
+    [baseProtectedApi.reducerPath]: baseProtectedApi.reducer,
 });
 
-// 3. Persist ile Zırhla
+
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
     reducer: persistedReducer,
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
-            serializableCheck: false, // Redux Persist için gerekli (Hata vermesin diye)
-        }),
+            serializableCheck: false, // Redux Persist için gerekli
+        }).concat(basePublicApi.middleware, baseProtectedApi.middleware),
 });
 
 export const persistor = persistStore(store); // Persist yöneticisi
@@ -41,4 +39,9 @@ export const persistor = persistStore(store); // Persist yöneticisi
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-//Ana Depo
+//Ana Depo herşeyi birleştirir.
+
+//Sepet (cart), Giriş Bilgileri (auth) ve tüm API'lar burada birleşir.
+
+
+ 

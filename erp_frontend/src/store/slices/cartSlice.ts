@@ -47,4 +47,4 @@ const cartSlice = createSlice({
 export const { addToCart, removeFromCart, decreaseQuantity, clearCart } = cartSlice.actions;
 export default cartSlice.reducer;
 
-//Kural Kitabı
+//Sepetteki ürünleri tutar.

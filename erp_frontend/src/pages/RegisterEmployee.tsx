@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import api from '../api'
+import { axiosService as api } from '../services/httpRequest'
 import Alert from '../components/molecules/Alert'
 import Button from '../components/atoms/Button'
 import FormField from '../components/molecules/FormField'

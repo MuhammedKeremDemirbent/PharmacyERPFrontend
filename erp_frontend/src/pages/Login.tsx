@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../api";
+import { useLoginMutation } from "../store/api/authApi";
 import Alert from "../components/molecules/Alert";
 import Button from "../components/atoms/Button";
 import FormField from "../components/molecules/FormField";
@@ -20,18 +20,18 @@ const Login = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [messageData, setMessageData] = useState<{ type: 'success' | 'error' | 'warning', title?: string, message: string } | null>(null);
-    const [loading, setLoading] = useState(false);
+
+    const [login, { isLoading }] = useLoginMutation();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-
+        setMessageData(null);
 
         try {
             // Backend: POST /token/ -> { access: "...", refresh: "..." }
-            const response = await api.post("/token/", { username, password });
+            const response = await login({ username, password }).unwrap();
 
-            const { access, refresh } = response.data;
+            const { access, refresh } = response;
 
             // Tokenları kaydet (Redux üzerinden)
             dispatch(loginSuccess({
@@ -45,9 +45,9 @@ const Login = () => {
 
         } catch (err: any) {
             console.error("Login Hatası:", err);
-            setMessageData({ type: 'error', message: 'Giriş başarısız! Kullanıcı adı veya şifre hatalı.' });
-        } finally {
-            setLoading(false);
+            // Hata mesajını düzgün gösterelim
+            const errorMsg = err.data?.detail || err.data?.error || 'Giriş başarısız! Kullanıcı adı veya şifre hatalı.';
+            setMessageData({ type: 'error', message: errorMsg });
         }
     };
 
@@ -101,7 +101,7 @@ const Login = () => {
 
                         <Button
                             type="submit"
-                            isLoading={loading}
+                            isLoading={isLoading}
                             className="w-full"
                         >
                             Giriş Yap

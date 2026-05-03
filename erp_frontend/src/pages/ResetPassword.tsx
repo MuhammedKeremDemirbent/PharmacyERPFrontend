@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from '@/api';
+import { useResetPasswordMutation } from '@/store/api/passwordChangeApi';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
@@ -16,9 +16,10 @@ const ResetPassword = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
     // Eğer token yoksa ana sayfaya yönlendir veya hata göster
     useEffect(() => {
@@ -40,22 +41,21 @@ const ResetPassword = () => {
             return;
         }
 
-        setIsLoading(true);
         setError(null);
 
         try {
-            await axios.post('/accounts/reset-password/', {
-                token: token,
+            await resetPassword({
+                token: token!,
                 new_password: password
-            });
+            }).unwrap();
+
             setIsSuccess(true);
             // 3 saniye sonra login'e yönlendir
             setTimeout(() => navigate('/'), 3000);
         } catch (err: any) {
             console.error(err);
-            setError(err.response?.data?.message || 'Bağlantı geçersiz veya süresi dolmuş.');
-        } finally {
-            setIsLoading(false);
+            const msg = err.data?.message || err.data?.detail || 'Bağlantı geçersiz veya süresi dolmuş.';
+            setError(msg);
         }
     };
 

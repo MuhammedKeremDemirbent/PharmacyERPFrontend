@@ -5,28 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import axios from '@/api';
+import { useForgotPasswordMutation } from '../store/api/passwordChangeApi';
 import Alert from '../components/molecules/Alert';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
         setError(null);
 
         try {
-            await axios.post('/accounts/forgot-password/', { email });
+            await forgotPassword({ email }).unwrap();
             setIsSent(true);
         } catch (err: any) {
             console.error(err);
-            setError(err.response?.data?.message || 'Bir hata oluştu. Lütfen tekrar deneyin.');
-        } finally {
-            setIsLoading(false);
+            setError(err.data?.message || err.data?.detail || 'Bir hata oluştu. Lütfen tekrar deneyin.');
         }
     };
 
