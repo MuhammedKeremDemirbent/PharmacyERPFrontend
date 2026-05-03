@@ -131,3 +131,6 @@ dist-ssr
 *.sw?
 .vscode/*
 !.vscode/extensions.json
+
+ornek_hasta_listesi.xlsx
+ornek_ilac_listesi.xlsx
